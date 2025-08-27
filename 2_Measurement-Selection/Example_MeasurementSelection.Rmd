@@ -1,0 +1,381 @@
+---
+title: "Example: Measurement selection"
+author: "Laura Grajeda"
+date: "August 26, 2025"
+output: html_document
+---
+
+
+```{r}
+library(tidyverse)
+library(here)
+library(writexl)
+`%notin%` <- Negate(`%in%`)
+```
+
+
+
+
+# Goal
+
+Apply functions to select the best measurements and the artifact-free measurements. Then, compute tests.
+
+
+
+
+
+# Create a single datasets
+
+
+Row bind measurements from different rds files.
+```{r}
+# TIMECOURSE DATA
+# Look for the individual files in this folder.
+list_files<-list.files(path = here("1_Artifact-Detection/output"), pattern = "TC_withQC.rds", full.names = T)
+df_list <- map(list_files, read_rds)
+names(df_list)
+dt_tc<-bind_rows(df_list)
+remove(df_list)
+ 
+
+
+# VOLUME PRESSUR AND FLOW DATA
+list_files<-list.files(path = here("1_Artifact-Detection/output"), pattern = "RV_withQC.rds", full.names = T)
+df_list <- map(list_files, read_rds)
+names(df_list)
+dt_rv<-bind_rows(df_list)
+remove(df_list)
+ 
+
+```
+
+
+
+# Pull functions
+
+Create a function to source markdown files
+```{r}
+source_rmd = function(file, ...) {
+  tmp_file = tempfile(fileext=".R")
+  on.exit(unlink(tmp_file), add = TRUE)
+  knitr::purl(file, output=tmp_file)
+  source(file = tmp_file, ...)
+}
+```
+
+
+Open and run the rmarkdown file that has the functions used for artifact detection with the in-house filter. After running the code the functions will be loaded in the session. This is like calling library().
+```{r}
+source_rmd(here("2_Measurement-Selection","Functions_MeasurementSelection.Rmd"))
+```
+
+
+
+# Compute measures
+
+
+Take timecourse data and produce measures.
+
+
+```{r}
+# AR1 - SD filter
+M.SD <- dt_tc %>% 
+  filter(KeepMeasure.SD==1 & DropBreath.SD==0) %>% 
+  ComputeMeasures()
+
+# AR2 - SDExt filter
+M.SDExt <- dt_tc %>% 
+  filter(KeepMeasure.SDExt==1 & DropBreath.SDExt==0) %>% 
+  ComputeMeasures()
+
+# AR2 - TSDExt filter
+M.TSDExt <- dt_tc %>% 
+  filter(KeepMeasure.TSDExt==1 & DropBreath.TSDExt==0) %>% 
+  ComputeMeasures()
+```
+
+
+
+
+# Select measures
+
+## + Closest 3
+
+AR1 - SD filter
+```{r}
+M.SD.close <- SelectClosest3_exact(M.SD, 
+                     R7est=M.SD$M.R7,
+                     R11est=M.SD$M.R11,
+                     R13est=M.SD$M.R13,
+                     R17est=M.SD$M.R17,
+                     R19est=M.SD$M.R19,
+                     R23est=M.SD$M.R23,
+                     R29est=M.SD$M.R29,
+                     R31est=M.SD$M.R31,
+                     R37est=M.SD$M.R37,
+                     R41est=M.SD$M.R41,
+                     X7est = M.SD$M.X7,
+                     R7R19est = M.SD$M.R7R19,
+                     AXest = M.SD$M.AX,
+                     FResest = M.SD$M.FRes)
+```
+
+AR2 - SDExt filter
+```{r}
+M.SDExt.close <- SelectClosest3_exact(M.SDExt, 
+                        R7est= M.SDExt$M.R7,
+                        R11est= M.SDExt$M.R11,
+                        R13est=M.SDExt$M.R13,
+                        R17est=M.SDExt$M.R17,
+                        R19est=M.SDExt$M.R19,
+                        R23est=M.SDExt$M.R23,
+                        R29est=M.SDExt$M.R29,
+                        R31est=M.SDExt$M.R31,
+                        R37est=M.SDExt$M.R37,
+                        R41est=M.SDExt$M.R41,
+                        X7est = M.SDExt$M.X7,
+                        R7R19est = M.SDExt$M.R7R19,
+                        AXest = M.SDExt$M.AX,
+                        FResest = M.SDExt$M.FRes)
+```
+
+AR3 - TSDExt filter
+```{r}
+M.TSDExt.close <- SelectClosest3_exact(M.TSDExt, 
+                         R7est=M.TSDExt$M.R7,
+                         R11est= M.TSDExt$M.R11,
+                         R13est=M.TSDExt$M.R13,
+                         R17est=M.TSDExt$M.R17,
+                         R19est=M.TSDExt$M.R19,
+                         R23est=M.TSDExt$M.R23,
+                         R29est=M.TSDExt$M.R29,
+                         R31est=M.TSDExt$M.R31,
+                         R37est=M.TSDExt$M.R37,
+                         R41est=M.TSDExt$M.R41,
+                         X7est = M.TSDExt$M.X7,
+                         R7R19est = M.TSDExt$M.R7R19,
+                         AXest = M.TSDExt$M.AX,
+                        FResest = M.TSDExt$M.FRes)
+```
+
+
+
+
+
+
+## + Distance to mean
+
+
+
+AR1 - SD
+```{r}
+M.SD.Dist15 <- SelectOnDisttoMean15(M.SD, 
+                             R7est=M.SD$M.R7,
+                             X7est = M.SD$M.X7,
+                             R7R19est = M.SD$M.R7R19,
+                             AXest = M.SD$M.AX,
+                             FResest = M.SD$M.FRes)
+```
+
+AR2 - SDExt
+```{r}
+M.SDExt.Dist15 <- SelectOnDisttoMean15(M.SDExt, 
+                             R7est=M.SDExt$M.R7,
+                             X7est = M.SDExt$M.X7,
+                             R7R19est = M.SDExt$M.R7R19,
+                             AXest = M.SDExt$M.AX,
+                             FResest = M.SDExt$M.FRes)
+```
+
+AR3 - TSDExt
+```{r}
+M.TSDExt.Dist15 <- SelectOnDisttoMean15(M.TSDExt, 
+                             R7est=M.TSDExt$M.R7,
+                             X7est = M.TSDExt$M.X7,
+                             R7R19est = M.TSDExt$M.R7R19,
+                             AXest = M.TSDExt$M.AX,
+                             FResest = M.TSDExt$M.FRes)
+```
+
+
+
+
+
+## * R7CoV15
+
+
+AR1 - SD
+```{r message=FALSE}
+# Select the tests in which the first three measurements have an R7 CoV <= 15%. 
+SEL123<-ChooseXFromFirstY(data=M.SD, idsToRemove=c(), choose = 3, fromFirst=3)
+
+# Among the tests that did not meet the COV criterion with their first three measurements, select the tests that meet the CoV criterion when evaluating any combination of the first four measurements.
+SEL1234<-ChooseXFromFirstY(data=M.SD, idsToRemove=c(SEL123$ids), choose = 3, fromFirst=4)
+
+# Among the tests that did not meet the COV criterion with their first 4 measurements, select the tests that meet the CoV criterion when evaluating any combination of the first 5 measurements.
+SEL12345<-ChooseXFromFirstY(data=M.SD, idsToRemove=c(SEL123$ids, SEL1234$ids), choose = 3, fromFirst=5)
+
+# Among the tests that did not meet the COV criterion with their first 5 measurements, select the tests that meet the CoV criterion when evaluating any combination of the first 6 measurements.
+SEL123456<-ChooseXFromFirstY(data=M.SD, idsToRemove=c(SEL123$ids, SEL1234$ids, SEL12345$ids), choose = 3, fromFirst=6)
+
+# Among the tests that did not meet the COV criterion with their first 6 measurements, select the tests that meet the CoV criterion when evaluating any combination of the first 7 measurements.
+SEL1234567<-ChooseXFromFirstY(data=M.SD, idsToRemove=c(SEL123$ids, SEL1234$ids, SEL12345$ids, SEL123456$ids), choose = 3, fromFirst=7)
+
+
+# Among the tests that did not meet the COV criterion with their first 7 measurements, select the tests that meet the CoV criterion when evaluating any combination of the first 8 measurements.
+SEL12345678<-ChooseXFromFirstY(data=M.SD, idsToRemove=c(SEL123$ids, SEL1234$ids, SEL12345$ids, SEL123456$ids, SEL1234567$ids), choose = 3, fromFirst=8)
+
+# Rowbind the tests
+M.SD.CoV <- bind_rows(SEL123$SEL, SEL1234$SEL, SEL12345$SEL, SEL123456$SEL, 
+            SEL1234567$SEL, SEL12345678$SEL) 
+
+# housekeeping cleaning
+remove(SEL123, SEL1234, SEL12345, SEL123456, SEL1234567, SEL12345678)
+```
+
+
+AR2 - SDExt
+```{r message=FALSE}
+# Select the tests in which the first three measurements have an R7 CoV <= 15%. 
+SEL123<-ChooseXFromFirstY(data=M.SDExt, idsToRemove=c(), choose = 3, fromFirst=3)
+
+# Among the tests that did not meet the COV criterion with their first three measurements, select the tests that meet the CoV criterion when evaluating any combination of the first four measurements.
+SEL1234<-ChooseXFromFirstY(data=M.SDExt, idsToRemove=c(SEL123$ids), choose = 3, fromFirst=4)
+
+# Among the tests that did not meet the COV criterion with their first 4 measurements, select the tests that meet the CoV criterion when evaluating any combination of the first 5 measurements.
+SEL12345<-ChooseXFromFirstY(data=M.SDExt, idsToRemove=c(SEL123$ids, SEL1234$ids), choose = 3, fromFirst=5)
+
+# Among the tests that did not meet the COV criterion with their first 5 measurements, select the tests that meet the CoV criterion when evaluating any combination of the first 6 measurements.
+SEL123456<-ChooseXFromFirstY(data=M.SDExt, idsToRemove=c(SEL123$ids, SEL1234$ids, SEL12345$ids), choose = 3, fromFirst=6)
+
+# Among the tests that did not meet the COV criterion with their first 6 measurements, select the tests that meet the CoV criterion when evaluating any combination of the first 7 measurements.
+SEL1234567<-ChooseXFromFirstY(data=M.SDExt, idsToRemove=c(SEL123$ids, SEL1234$ids, SEL12345$ids, SEL123456$ids), choose = 3, fromFirst=7)
+
+
+# Among the tests that did not meet the COV criterion with their first 7 measurements, select the tests that meet the CoV criterion when evaluating any combination of the first 8 measurements.
+SEL12345678<-ChooseXFromFirstY(data=M.SDExt, idsToRemove=c(SEL123$ids, SEL1234$ids, SEL12345$ids, SEL123456$ids, SEL1234567$ids), choose = 3, fromFirst=8)
+
+# Rowbind the tests
+M.SDExt.CoV <- bind_rows(SEL123$SEL, SEL1234$SEL, SEL12345$SEL, SEL123456$SEL, 
+            SEL1234567$SEL, SEL12345678$SEL) 
+
+# housekeeping cleaning
+remove(SEL123, SEL1234, SEL12345, SEL123456, SEL1234567, SEL12345678)
+```
+
+
+AR3 - TSDExt
+```{r message=FALSE}
+# Select the tests in which the first three measurements have an R7 CoV <= 15%. 
+SEL123<-ChooseXFromFirstY(data=M.TSDExt, idsToRemove=c(), choose = 3, fromFirst=3)
+
+# Among the tests that did not meet the COV criterion with their first three measurements, select the tests that meet the CoV criterion when evaluating any combination of the first four measurements.
+SEL1234<-ChooseXFromFirstY(data=M.TSDExt, idsToRemove=c(SEL123$ids), choose = 3, fromFirst=4)
+
+# Among the tests that did not meet the COV criterion with their first 4 measurements, select the tests that meet the CoV criterion when evaluating any combination of the first 5 measurements.
+SEL12345<-ChooseXFromFirstY(data=M.TSDExt, idsToRemove=c(SEL123$ids, SEL1234$ids), choose = 3, fromFirst=5)
+
+# Among the tests that did not meet the COV criterion with their first 5 measurements, select the tests that meet the CoV criterion when evaluating any combination of the first 6 measurements.
+SEL123456<-ChooseXFromFirstY(data=M.TSDExt, idsToRemove=c(SEL123$ids, SEL1234$ids, SEL12345$ids), choose = 3, fromFirst=6)
+
+# Among the tests that did not meet the COV criterion with their first 6 measurements, select the tests that meet the CoV criterion when evaluating any combination of the first 7 measurements.
+SEL1234567<-ChooseXFromFirstY(data=M.TSDExt, idsToRemove=c(SEL123$ids, SEL1234$ids, SEL12345$ids, SEL123456$ids), choose = 3, fromFirst=7)
+
+
+# Among the tests that did not meet the COV criterion with their first 7 measurements, select the tests that meet the CoV criterion when evaluating any combination of the first 8 measurements.
+SEL12345678<-ChooseXFromFirstY(data=M.TSDExt, idsToRemove=c(SEL123$ids, SEL1234$ids, SEL12345$ids, SEL123456$ids, SEL1234567$ids), choose = 3, fromFirst=8)
+
+# Rowbind the tests
+M.TSDExt.CoV <- bind_rows(SEL123$SEL, SEL1234$SEL, SEL12345$SEL, SEL123456$SEL, 
+            SEL1234567$SEL, SEL12345678$SEL) 
+
+# housekeeping cleaning
+remove(SEL123, SEL1234, SEL12345, SEL123456, SEL1234567, SEL12345678)
+```
+
+
+
+
+
+
+# Compute tests
+
+
+
+## + Closest 3
+```{r}
+# AR1- SD
+T.SD.Close <- ComputeTests(M.SD.close)
+
+# AR2- SDExt
+T.SDExt.Close <- ComputeTests(M.SDExt.close)
+
+# AR3- TSDExt
+T.TSDExt.Close <- ComputeTests(M.TSDExt.close)
+```
+
+
+
+
+
+
+## + Distance to mean
+```{r}
+# AR1- SD
+T.SD.Dist15 <- ComputeTests_subset(M.SD.Dist15)
+
+# AR2- SDExt
+T.SDExt.Dist15 <- ComputeTests_subset(M.SDExt.Dist15)
+
+# AR3- TSDExt
+T.TSDExt.Dist15 <- ComputeTests_subset(M.TSDExt.Dist15)
+```
+
+
+## * CoV
+```{r}
+# AR1- SD
+T.SD.Cov <- ComputeTests(M.SD.CoV)
+
+# AR2- SDExt
+T.SDExt.Cov <- ComputeTests(M.SDExt.CoV)
+
+# AR3- TSDExt
+T.TSDExt.Cov <- ComputeTests(M.TSDExt.CoV)
+```
+
+
+# Save tests
+
+```{r}
+
+# Closest4
+write_rds(T.SD.Close, here("output/Tests_AR1-Close.rds"))
+write_rds(T.SDExt.Close, here("output/Tests_AR2-Close.rds"))
+write_rds(T.TSDExt.Close, here("output/Tests_AR3-Close.rds"))
+
+# Distance15
+write_rds(T.SD.Dist15, here("output/Tests_AR1-Dist.rds"))
+write_rds(T.SDExt.Dist15, here("output/Tests_AR2-Dist.rds"))
+write_rds(T.TSDExt.Dist15, here("output/Tests_AR3-Dist.rds"))
+
+# CoV
+write_rds(T.SD.Cov, here("output/Tests_AR1-CoV.rds"))
+write_rds(T.SDExt.Cov, here("output/Tests_AR2-CoV.rds"))
+write_rds(T.TSDExt.Cov, here("output/Tests_AR3-CoV.rds"))
+```
+
+
+
+```{r}
+c(T.SD.Close$T.R7[1], T.SDExt.Close$T.R7[1], T.TSDExt.Close$T.R7[1],
+  T.SD.Dist15$T.R7[1], T.SDExt.Dist15$T.R7[1], T.TSDExt.Dist15$T.R7[1],
+  T.SD.Cov$T.R7[1], T.SDExt.Cov$T.R7[1], T.TSDExt.Cov$T.R7[1])
+```
+
+
+# THE END
+
+
+
+

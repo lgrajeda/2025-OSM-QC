@@ -1,0 +1,649 @@
+---
+title: "Example: Artifact Detection"
+author: "Laura Grajeda"
+date: "August 26, 2025"
+output: html_document
+---
+
+
+
+# Goal
+
+Apply functions to detect upper airways artifacts on the measurements of child ID45263.
+
+
+
+
+# Starting datasets
+```{r}
+TC_ID45263 <- data.frame()
+RV_ID45263 <- data.frame()
+count <- 0
+```
+
+
+
+# Load functions
+```{r}
+library(here)
+library(readxl)
+library(tidyverse)
+library(janitor)
+library(patchwork)
+```
+
+
+Create a function to source markdown files
+```{r}
+source_rmd = function(file, ...) {
+  tmp_file = tempfile(fileext=".R")
+  on.exit(unlink(tmp_file), add = TRUE)
+  knitr::purl(file, output=tmp_file)
+  source(file = tmp_file, ...)
+}
+```
+
+
+Open and run the rmarkdown file that has the functions used for artifact detection with the in-house filter. After running the code the functions will be loaded in the session. This is like calling library().
+```{r}
+source_rmd(here("1_Artifact-Detection/Functions_ArtifactDetection.Rmd"))
+```
+
+# Read and apply measure level filters
+
+
+### Measure 1
+
+```{r}
+top <- read_excel(here("input/ID45263_Vol,Pcyl,Flow.xlsx"), 
+                  range = cell_limits(c(8,1+5*count), c(14,2+5*count)))
+top <- top %>% 
+  t() %>%  
+  data.frame() %>% 
+  rownames_to_column() %>% 
+  row_to_names(1) %>% 
+  clean_names() %>% 
+  mutate(timestamp = dmy_hms(timestamp),
+         MeasureWithinTest = "Measure 1")
+  
+
+bottom <- read_excel(here("input/ID45263_Vol,Pcyl,Flow.xlsx"), 
+                     range = cell_limits(c(16,1+5*count), c(5137,4+5*count)))
+bottom <- bottom[-1,]
+
+RV <- top %>% 
+  bind_cols(bottom) %>% 
+  mutate(Time= as.numeric(Time),
+         Vol = as.numeric(Vol),
+         Flow = as.numeric(Flow),
+         Pcyl = as.numeric(Pcyl))
+
+```
+
+
+```{r}
+top <- readxl::read_excel(here("input/ID45263_Timecourse Data.xlsx"),  
+                                 range = cell_limits(c(8,1+22*count), c(14,2+22*count)))
+
+top <- top %>% 
+  t() %>%  
+  data.frame() %>% 
+  rownames_to_column() %>% 
+  row_to_names(1) %>% 
+  clean_names() %>% 
+  mutate(timestamp = dmy_hms(timestamp),
+         MeasureWithinTest = "Measure 1")
+                  
+dt <- readxl::read_excel(here("input/ID45263_Timecourse Data.xlsx"),  
+                         range = cell_limits(c(16,1+22*count), c(198,21+22*count)), col_types = "numeric" )
+dt <- dt[-1,]
+TC <- bind_cols(top, dt)
+```
+
+
+```{r warning=FALSE}
+# Flag artifacts
+output <- M.AllSteps(RV, TC)
+RV <- output[[1]]
+TC <- output[[2]]
+
+# Plots
+Plot <- M.AllPlots(RV, TC)
+
+# Create child dataset
+TC_ID45263 <- TC_ID45263 %>% bind_rows(TC)
+RV_ID45263 <- RV_ID45263 %>% bind_rows(RV)
+```
+
+```{r}
+count <- count+1
+```
+
+
+
+### Measure 2
+
+
+
+```{r}
+top <- read_excel(here("input/ID45263_Vol,Pcyl,Flow.xlsx"), 
+                  range = cell_limits(c(8,1+5*count), c(14,2+5*count)))
+top <- top %>% 
+  t() %>%  
+  data.frame() %>% 
+  rownames_to_column() %>% 
+  row_to_names(1) %>% 
+  clean_names() %>% 
+  mutate(timestamp = dmy_hms(timestamp),
+         MeasureWithinTest = "Measure 2")
+  
+
+bottom <- read_excel(here("input/ID45263_Vol,Pcyl,Flow.xlsx"), 
+                     range = cell_limits(c(16,1+5*count), c(5137,4+5*count)))
+bottom <- bottom[-1,]
+
+RV <- top %>% 
+  bind_cols(bottom) %>% 
+  mutate(Time= as.numeric(Time),
+         Vol = as.numeric(Vol),
+         Flow = as.numeric(Flow),
+         Pcyl = as.numeric(Pcyl))
+
+```
+
+
+```{r}
+top <- readxl::read_excel(here("input/ID45263_Timecourse Data.xlsx"),  
+                                 range = cell_limits(c(8,1+22*count), c(14,2+22*count)))
+
+top <- top %>% 
+  t() %>%  
+  data.frame() %>% 
+  rownames_to_column() %>% 
+  row_to_names(1) %>% 
+  clean_names() %>% 
+  mutate(timestamp = dmy_hms(timestamp),
+         MeasureWithinTest = "Measure 2")
+                  
+dt <- readxl::read_excel(here("input/ID45263_Timecourse Data.xlsx"),  
+                         range = cell_limits(c(16,1+22*count), c(198,21+22*count)), col_types = "numeric" )
+dt <- dt[-1,]
+TC <- bind_cols(top, dt)
+```
+
+
+
+```{r warning=FALSE}
+# Flag artifacts
+output <- M.AllSteps(RV, TC)
+RV <- output[[1]]
+TC <- output[[2]]
+
+# Plots
+Plot <- M.AllPlots(RV, TC)
+
+# Create child dataset
+TC_ID45263 <- TC_ID45263 %>% bind_rows(TC)
+RV_ID45263 <- RV_ID45263 %>% bind_rows(RV)
+```
+
+
+```{r}
+count <- count+1
+```
+
+
+### Measure 3
+
+
+```{r}
+top <- read_excel(here("input/ID45263_Vol,Pcyl,Flow.xlsx"), 
+                  range = cell_limits(c(8,1+5*count), c(14,2+5*count)))
+top <- top %>% 
+  t() %>%  
+  data.frame() %>% 
+  rownames_to_column() %>% 
+  row_to_names(1) %>% 
+  clean_names() %>% 
+  mutate(timestamp = dmy_hms(timestamp),
+         MeasureWithinTest = "Measure 3")
+  
+
+bottom <- read_excel(here("input/ID45263_Vol,Pcyl,Flow.xlsx"), 
+                     range = cell_limits(c(16,1+5*count), c(5137,4+5*count)))
+bottom <- bottom[-1,]
+
+RV <- top %>% 
+  bind_cols(bottom) %>% 
+  mutate(Time= as.numeric(Time),
+         Vol = as.numeric(Vol),
+         Flow = as.numeric(Flow),
+         Pcyl = as.numeric(Pcyl))
+
+```
+
+
+```{r}
+top <- readxl::read_excel(here("input/ID45263_Timecourse Data.xlsx"),  
+                                 range = cell_limits(c(8,1+22*count), c(14,2+22*count)))
+
+top <- top %>% 
+  t() %>%  
+  data.frame() %>% 
+  rownames_to_column() %>% 
+  row_to_names(1) %>% 
+  clean_names() %>% 
+  mutate(timestamp = dmy_hms(timestamp),
+         MeasureWithinTest = "Measure 3")
+                  
+dt <- readxl::read_excel(here("input/ID45263_Timecourse Data.xlsx"),  
+                         range = cell_limits(c(16,1+22*count), c(198,21+22*count)), col_types = "numeric" )
+dt <- dt[-1,]
+TC <- bind_cols(top, dt)
+```
+
+```{r warning=FALSE}
+# Flag artifacts
+output <- M.AllSteps(RV, TC)
+RV <- output[[1]]
+TC <- output[[2]]
+
+# Plots
+Plot <- M.AllPlots(RV, TC)
+
+# Create child dataset
+TC_ID45263 <- TC_ID45263 %>% bind_rows(TC)
+RV_ID45263 <- RV_ID45263 %>% bind_rows(RV)
+```
+
+```{r}
+count <- count+1
+```
+
+
+### Measure 4
+
+
+```{r}
+top <- read_excel(here("input/ID45263_Vol,Pcyl,Flow.xlsx"), 
+                  range = cell_limits(c(8,1+5*count), c(14,2+5*count)))
+top <- top %>% 
+  t() %>%  
+  data.frame() %>% 
+  rownames_to_column() %>% 
+  row_to_names(1) %>% 
+  clean_names() %>% 
+  mutate(timestamp = dmy_hms(timestamp),
+         MeasureWithinTest = "Measure 4")
+  
+
+bottom <- read_excel(here("input/ID45263_Vol,Pcyl,Flow.xlsx"), 
+                     range = cell_limits(c(16,1+5*count), c(5137,4+5*count)))
+bottom <- bottom[-1,]
+
+RV <- top %>% 
+  bind_cols(bottom) %>% 
+  mutate(Time= as.numeric(Time),
+         Vol = as.numeric(Vol),
+         Flow = as.numeric(Flow),
+         Pcyl = as.numeric(Pcyl))
+
+```
+
+
+```{r}
+top <- readxl::read_excel(here("input/ID45263_Timecourse Data.xlsx"),  
+                                 range = cell_limits(c(8,1+22*count), c(14,2+22*count)))
+
+top <- top %>% 
+  t() %>%  
+  data.frame() %>% 
+  rownames_to_column() %>% 
+  row_to_names(1) %>% 
+  clean_names() %>% 
+  mutate(timestamp = dmy_hms(timestamp),
+         MeasureWithinTest = "Measure 4")
+                  
+dt <- readxl::read_excel(here("input/ID45263_Timecourse Data.xlsx"),  
+                         range = cell_limits(c(16,1+22*count), c(198,21+22*count)), col_types = "numeric" )
+dt <- dt[-1,]
+TC <- bind_cols(top, dt)
+```
+
+```{r warning=FALSE}
+# Flag artifacts
+output <- M.AllSteps(RV, TC)
+RV <- output[[1]]
+TC <- output[[2]]
+
+# Plots
+Plot <- M.AllPlots(RV, TC)
+
+# Create child dataset
+TC_ID45263 <- TC_ID45263 %>% bind_rows(TC)
+RV_ID45263 <- RV_ID45263 %>% bind_rows(RV)
+```
+
+```{r}
+count <- count+1
+```
+
+
+### Measure 5
+
+```{r}
+top <- read_excel(here("input/ID45263_Vol,Pcyl,Flow.xlsx"), 
+                  range = cell_limits(c(8,1+5*count), c(14,2+5*count)))
+top <- top %>% 
+  t() %>%  
+  data.frame() %>% 
+  rownames_to_column() %>% 
+  row_to_names(1) %>% 
+  clean_names() %>% 
+  mutate(timestamp = dmy_hms(timestamp),
+         MeasureWithinTest = "Measure 5")
+  
+
+bottom <- read_excel(here("input/ID45263_Vol,Pcyl,Flow.xlsx"), 
+                     range = cell_limits(c(16,1+5*count), c(5137,4+5*count)))
+bottom <- bottom[-1,]
+
+RV <- top %>% 
+  bind_cols(bottom) %>% 
+  mutate(Time= as.numeric(Time),
+         Vol = as.numeric(Vol),
+         Flow = as.numeric(Flow),
+         Pcyl = as.numeric(Pcyl))
+
+```
+
+
+```{r}
+top <- readxl::read_excel(here("input/ID45263_Timecourse Data.xlsx"),  
+                                 range = cell_limits(c(8,1+22*count), c(14,2+22*count)))
+
+top <- top %>% 
+  t() %>%  
+  data.frame() %>% 
+  rownames_to_column() %>% 
+  row_to_names(1) %>% 
+  clean_names() %>% 
+  mutate(timestamp = dmy_hms(timestamp),
+         MeasureWithinTest = "Measure 5")
+                  
+dt <- readxl::read_excel(here("input/ID45263_Timecourse Data.xlsx"),  
+                         range = cell_limits(c(16,1+22*count), c(198,21+22*count)), col_types = "numeric" )
+dt <- dt[-1,]
+TC <- bind_cols(top, dt)
+```
+
+
+
+```{r warning=FALSE}
+# Flag artifacts
+output <- M.AllSteps(RV, TC)
+RV <- output[[1]]
+TC <- output[[2]]
+
+# Plots
+Plot <- M.AllPlots(RV, TC)
+
+# Create child dataset
+TC_ID45263 <- TC_ID45263 %>% bind_rows(TC)
+RV_ID45263 <- RV_ID45263 %>% bind_rows(RV)
+```
+
+```{r}
+count <- count+1
+```
+
+
+
+### Measure 6
+
+```{r}
+top <- read_excel(here("input/ID45263_Vol,Pcyl,Flow.xlsx"), 
+                  range = cell_limits(c(8,1+5*count), c(14,2+5*count)))
+top <- top %>% 
+  t() %>%  
+  data.frame() %>% 
+  rownames_to_column() %>% 
+  row_to_names(1) %>% 
+  clean_names() %>% 
+  mutate(timestamp = dmy_hms(timestamp),
+         MeasureWithinTest = "Measure 6")
+  
+
+bottom <- read_excel(here("input/ID45263_Vol,Pcyl,Flow.xlsx"), 
+                     range = cell_limits(c(16,1+5*count), c(5137,4+5*count)))
+bottom <- bottom[-1,]
+
+RV <- top %>% 
+  bind_cols(bottom) %>% 
+  mutate(Time= as.numeric(Time),
+         Vol = as.numeric(Vol),
+         Flow = as.numeric(Flow),
+         Pcyl = as.numeric(Pcyl))
+
+```
+
+
+
+```{r}
+top <- readxl::read_excel(here("input/ID45263_Timecourse Data.xlsx"),  
+                                 range = cell_limits(c(8,1+22*count), c(14,2+22*count)))
+
+top <- top %>% 
+  t() %>%  
+  data.frame() %>% 
+  rownames_to_column() %>% 
+  row_to_names(1) %>% 
+  clean_names() %>% 
+  mutate(timestamp = dmy_hms(timestamp),
+         MeasureWithinTest = "Measure 6")
+                  
+dt <- readxl::read_excel(here("input/ID45263_Timecourse Data.xlsx"),  
+                         range = cell_limits(c(16,1+22*count), c(198,21+22*count)), col_types = "numeric" )
+dt <- dt[-1,]
+TC <- bind_cols(top, dt)
+```
+
+
+```{r warning=FALSE}
+# Flag artifacts
+output <- M.AllSteps(RV, TC)
+RV <- output[[1]]
+TC <- output[[2]]
+
+# Plots
+Plot <- M.AllPlots(RV, TC)
+
+# Create child dataset
+TC_ID45263 <- TC_ID45263 %>% bind_rows(TC)
+RV_ID45263 <- RV_ID45263 %>% bind_rows(RV)
+```
+
+```{r}
+count <- count+1
+``` 
+
+
+### Measure 7
+
+```{r}
+top <- read_excel(here("input/ID45263_Vol,Pcyl,Flow.xlsx"), 
+                  range = cell_limits(c(8,1+5*count), c(14,2+5*count)))
+top <- top %>% 
+  t() %>%  
+  data.frame() %>% 
+  rownames_to_column() %>% 
+  row_to_names(1) %>% 
+  clean_names() %>% 
+  mutate(timestamp = dmy_hms(timestamp),
+         MeasureWithinTest = "Measure 7")
+  
+
+bottom <- read_excel(here("input/ID45263_Vol,Pcyl,Flow.xlsx"), 
+                     range = cell_limits(c(16,1+5*count), c(5137,4+5*count)))
+bottom <- bottom[-1,]
+
+RV <- top %>% 
+  bind_cols(bottom) %>% 
+  mutate(Time= as.numeric(Time),
+         Vol = as.numeric(Vol),
+         Flow = as.numeric(Flow),
+         Pcyl = as.numeric(Pcyl))
+
+```
+
+
+```{r}
+top <- readxl::read_excel(here("input/ID45263_Timecourse Data.xlsx"),  
+                                 range = cell_limits(c(8,1+22*count), c(14,2+22*count)))
+
+top <- top %>% 
+  t() %>%  
+  data.frame() %>% 
+  rownames_to_column() %>% 
+  row_to_names(1) %>% 
+  clean_names() %>% 
+  mutate(timestamp = dmy_hms(timestamp),
+         MeasureWithinTest = "Measure 7")
+                  
+dt <- readxl::read_excel(here("input/ID45263_Timecourse Data.xlsx"),  
+                         range = cell_limits(c(16,1+22*count), c(198,21+22*count)), col_types = "numeric" )
+dt <- dt[-1,]
+TC <- bind_cols(top, dt)
+```
+
+
+```{r warning=FALSE}
+# Flag artifacts
+output <- M.AllSteps(RV, TC)
+RV <- output[[1]]
+TC <- output[[2]]
+
+# Plots
+Plot <- M.AllPlots(RV, TC)
+
+# Create child dataset
+TC_ID45263 <- TC_ID45263 %>% bind_rows(TC)
+RV_ID45263 <- RV_ID45263 %>% bind_rows(RV)
+```
+
+```{r}
+count <- count+1
+``` 
+
+
+### Measure 8
+
+```{r}
+top <- read_excel(here("input/ID45263_Vol,Pcyl,Flow.xlsx"), 
+                  range = cell_limits(c(8,1+5*count), c(14,2+5*count)))
+top <- top %>% 
+  t() %>%  
+  data.frame() %>% 
+  rownames_to_column() %>% 
+  row_to_names(1) %>% 
+  clean_names() %>% 
+  mutate(timestamp = dmy_hms(timestamp),
+         MeasureWithinTest = "Measure 8")
+  
+
+bottom <- read_excel(here("input/ID45263_Vol,Pcyl,Flow.xlsx"), 
+                     range = cell_limits(c(16,1+5*count), c(5137,4+5*count)))
+bottom <- bottom[-1,]
+
+RV <- top %>% 
+  bind_cols(bottom) %>% 
+  mutate(Time= as.numeric(Time),
+         Vol = as.numeric(Vol),
+         Flow = as.numeric(Flow),
+         Pcyl = as.numeric(Pcyl))
+
+```
+
+
+```{r}
+top <- readxl::read_excel(here("input/ID45263_Timecourse Data.xlsx"),  
+                                 range = cell_limits(c(8,1+22*count), c(14,2+22*count)))
+
+top <- top %>% 
+  t() %>%  
+  data.frame() %>% 
+  rownames_to_column() %>% 
+  row_to_names(1) %>% 
+  clean_names() %>% 
+  mutate(timestamp = dmy_hms(timestamp),
+         MeasureWithinTest = "Measure 8")
+                  
+dt <- readxl::read_excel(here("input/ID45263_Timecourse Data.xlsx"),  
+                         range = cell_limits(c(16,1+22*count), c(198,21+22*count)), col_types = "numeric" )
+dt <- dt[-1,]
+TC <- bind_cols(top, dt)
+```
+
+```{r warning=FALSE}
+# Flag artifacts
+output <- M.AllSteps(RV, TC)
+RV <- output[[1]]
+TC <- output[[2]]
+
+# Plots
+Plot <- M.AllPlots(RV, TC)
+
+# Create child dataset
+TC_ID45263 <- TC_ID45263 %>% bind_rows(TC)
+RV_ID45263 <- RV_ID45263 %>% bind_rows(RV)
+```
+
+```{r}
+count <- count+1
+``` 
+
+
+
+
+
+
+
+
+
+# Apply test level filters
+
+
+```{r}
+TC_ID45263<-T.AllSteps(TC_ID45263)
+```
+
+
+
+# Save
+
+
+```{r}
+name <- paste0(TC_ID45263$patient[1], "_", as.Date(TC_ID45263$timestamp[1]), "_TC_withQC.rds")
+write_rds(TC_ID45263, here("1_Artifact-Detection/output", name))
+
+name <- paste0(RV_ID45263$patient[1], "_", as.Date(RV_ID45263$timestamp[1]), "_RV_withQC.rds")
+write_rds(RV_ID45263, here("1_Artifact-Detection/output", name))
+```
+
+
+# THE END
+
+
+
+```{r}
+TC_ID45263 %>% count(patient_test, MeasureWithinTest, KeepMeasure.SD, KeepMeasure.SDExt, KeepMeasure.TSDExt)
+```
+
+
+
+
+
+
+
+
+

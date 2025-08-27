@@ -1,0 +1,1965 @@
+---
+title: "Functions for artifact removal"
+author: "Laura M Grajeda"
+date: 'August 22, 2025'
+output: html_document
+---
+
+
+
+```{r}
+library(readxl)
+library(tidyverse)
+library(janitor)
+library(patchwork)
+```
+
+
+Below is a collection of functions to identify artifacts from Tremoflo e
+
+
+
+# 1. DEFINE INTERVALS
+
+## `M.BreathDetect` 
+
+Detects breaths within a single measure.  It uses the volume channel to identify the start and the end of each breath. The input is a dataset with the volume and flow channel of a single mesasurement, the output is a dataset with the rate, breathstep and breath number.
+
+```{r}
+M.BreathDetect <- function(M.VolFlow, M.Impedance){
+  # Calculate the rate of change or slope. 0 corresponds to the end or the start of a inspiration or expiration
+  M.VolFlow <- M.VolFlow %>% 
+    mutate(Rate = c(NA, NA, diff(M.VolFlow$Vol,2)/0.00390625^2))
+  # Obtain a vector of positions where the rate change its sign (from positive to negative or negative to positive)
+  Pos <- cumsum(rle(M.VolFlow$Rate >= 0)$lengths)
+  # Obtain a vector of times where the rate change its sign (from positive to negative or negative to positive)
+  vec <- (M.VolFlow$Time[Pos] + M.VolFlow$Time[Pos+1]) / 2
+  vec[length(vec)] <- 21
+  
+  Start <- ifelse(M.VolFlow$Rate[3]>1, "inspiration", "expiration")
+  
+  
+  M.VolFlow <- M.VolFlow %>% 
+    mutate(
+      BreathStep = case_when(
+         Start=="inspiration" & Time < vec[3] ~ "inspiration 1",
+         Start=="inspiration" & Time < vec[4] ~ "expiration 1",
+         Start=="inspiration" & Time < vec[5] ~ "inspiration 2",
+         Start=="inspiration" & Time < vec[6] ~ "expiration 2",
+         Start=="inspiration" & Time < vec[7] ~ "inspiration 3",
+         Start=="inspiration" & Time < vec[8] ~ "expiration 3",
+         Start=="inspiration" & Time < vec[9] ~ "inspiration 4",
+         Start=="inspiration" & Time < vec[10] ~ "expiration 4",
+         Start=="inspiration" & Time < vec[11] ~ "inspiration 5",
+         Start=="inspiration" & Time < vec[12] ~ "expiration 5",
+         Start=="inspiration" & Time < vec[13] ~ "inspiration 6",
+         Start=="inspiration" & Time < vec[14] ~ "expiration 6",
+         Start=="inspiration" & Time < vec[15] ~ "inspiration 7",
+         Start=="inspiration" & Time < vec[16] ~ "expiration 7",
+         Start=="inspiration" & Time < vec[17] ~ "inspiration 8",
+         Start=="inspiration" & Time < vec[18] ~ "expiration 8",
+         Start=="inspiration" & Time < vec[19] ~ "inspiration 9",
+         Start=="inspiration" & Time < vec[20] ~ "expiration 9",
+         Start=="inspiration" & Time < vec[21] ~ "inspiration 10",
+         Start=="inspiration" & Time < vec[22] ~ "expiration 10",
+         Start=="inspiration" & Time < vec[23] ~ "inspiration 11",
+         Start=="inspiration" & Time < vec[24] ~ "expiration 11",
+         Start=="inspiration" & Time < vec[25] ~ "inspiration 12",
+         Start=="inspiration" & Time < vec[26] ~ "expiration 12",
+         Start=="inspiration" & Time < vec[27] ~ "inspiration 13",
+         Start=="inspiration" & Time < vec[28] ~ "expiration 13",
+         Start=="inspiration" & Time < vec[29] ~ "inspiration 14",
+         Start=="inspiration" & Time < vec[30] ~ "expiration 14",
+         Start=="inspiration" & Time < vec[31] ~ "inspiration 15",
+         Start=="inspiration" & Time < vec[32] ~ "expiration 15",
+         Start=="inspiration" & Time < vec[33] ~ "inspiration 16",
+         Start=="inspiration" & Time < vec[34] ~ "expiration 16",
+         Start=="inspiration" & Time < vec[35] ~ "inspiration 17",
+         Start=="inspiration" & Time < vec[36] ~ "expiration 17",
+         Start=="inspiration" & Time < vec[37] ~ "inspiration 18",
+         Start=="inspiration" & Time < vec[38] ~ "expiration 18",
+      
+         Start=="expiration" & Time < vec[3] ~ "expiration 1",
+         Start=="expiration" & Time < vec[4] ~ "inspiration 2",
+         Start=="expiration" & Time < vec[5] ~ "expiration 2",
+         Start=="expiration" & Time < vec[6] ~ "inspiration 3",
+         Start=="expiration" & Time < vec[7] ~ "expiration 3",
+         Start=="expiration" & Time < vec[8] ~ "inspiration 4",
+         Start=="expiration" & Time < vec[9] ~ "expiration 4",
+         Start=="expiration" & Time < vec[10] ~ "inspiration 5",
+         Start=="expiration" & Time < vec[11] ~ "expiration 5",
+         Start=="expiration" & Time < vec[12] ~ "inspiration 6",
+         Start=="expiration" & Time < vec[13] ~ "expiration 6",
+         Start=="expiration" & Time < vec[14] ~ "inspiration 7",
+         Start=="expiration" & Time < vec[15] ~ "expiration 7",
+         Start=="expiration" & Time < vec[16] ~ "inspiration 8",
+         Start=="expiration" & Time < vec[17] ~ "expiration 8",
+         Start=="expiration" & Time < vec[18] ~ "inspiration 9",
+         Start=="expiration" & Time < vec[19] ~ "expiration 9",
+         Start=="expiration" & Time < vec[20] ~ "inspiration 10",
+         Start=="expiration" & Time < vec[21] ~ "expiration 10",
+         Start=="expiration" & Time < vec[22] ~ "inspiration 11",
+         Start=="expiration" & Time < vec[23] ~ "expiration 11",
+         Start=="expiration" & Time < vec[24] ~ "inspiration 12",
+         Start=="expiration" & Time < vec[25] ~ "expiration 12",
+         Start=="expiration" & Time < vec[26] ~ "inspiration 13",
+         Start=="expiration" & Time < vec[27] ~ "expiration 13",
+         Start=="expiration" & Time < vec[28] ~ "inspiration 14",
+         Start=="expiration" & Time < vec[29] ~ "expiration 14",
+         Start=="expiration" & Time < vec[30] ~ "inspiration 15",
+         Start=="expiration" & Time < vec[31] ~ "expiration 15",
+         Start=="expiration" & Time < vec[32] ~ "inspiration 16",
+         Start=="expiration" & Time < vec[33] ~ "expiration 16",
+         Start=="expiration" & Time < vec[34] ~ "inspiration 17",
+         Start=="expiration" & Time < vec[35] ~ "expiration 17",
+         Start=="expiration" & Time < vec[36] ~ "inspiration 18",
+         Start=="expiration" & Time < vec[37] ~ "expiration 18",
+         Start=="expiration" & Time < vec[38] ~ "inspiration 19",
+      TRUE ~ NA_character_),
+      
+    Breath = as.numeric(str_extract(BreathStep, "(\\d)+")))
+  
+  M.Impedance <- M.Impedance %>% 
+    mutate(BreathStep = case_when(
+      Start=="inspiration" & Time < vec[3] ~ "inspiration 1",
+      Start=="inspiration" & Time < vec[4] ~ "expiration 1",
+      Start=="inspiration" & Time < vec[5] ~ "inspiration 2",
+      Start=="inspiration" & Time < vec[6] ~ "expiration 2",
+      Start=="inspiration" & Time < vec[7] ~ "inspiration 3",
+      Start=="inspiration" & Time < vec[8] ~ "expiration 3",
+      Start=="inspiration" & Time < vec[9] ~ "inspiration 4",
+      Start=="inspiration" & Time < vec[10] ~ "expiration 4",
+      Start=="inspiration" & Time < vec[11] ~ "inspiration 5",
+      Start=="inspiration" & Time < vec[12] ~ "expiration 5",
+      Start=="inspiration" & Time < vec[13] ~ "inspiration 6",
+      Start=="inspiration" & Time < vec[14] ~ "expiration 6",
+      Start=="inspiration" & Time < vec[15] ~ "inspiration 7",
+      Start=="inspiration" & Time < vec[16] ~ "expiration 7",
+      Start=="inspiration" & Time < vec[17] ~ "inspiration 8",
+      Start=="inspiration" & Time < vec[18] ~ "expiration 8",
+      Start=="inspiration" & Time < vec[19] ~ "inspiration 9",
+      Start=="inspiration" & Time < vec[20] ~ "expiration 9",
+      Start=="inspiration" & Time < vec[21] ~ "inspiration 10",
+      Start=="inspiration" & Time < vec[22] ~ "expiration 10",
+      Start=="inspiration" & Time < vec[23] ~ "inspiration 11",
+      Start=="inspiration" & Time < vec[24] ~ "expiration 11",
+      Start=="inspiration" & Time < vec[25] ~ "inspiration 12",
+      Start=="inspiration" & Time < vec[26] ~ "expiration 12",
+      Start=="inspiration" & Time < vec[27] ~ "inspiration 13",
+      Start=="inspiration" & Time < vec[28] ~ "expiration 13",
+      Start=="inspiration" & Time < vec[29] ~ "inspiration 14",
+      Start=="inspiration" & Time < vec[30] ~ "expiration 14",
+      Start=="inspiration" & Time < vec[31] ~ "inspiration 15",
+      Start=="inspiration" & Time < vec[32] ~ "expiration 15",
+      Start=="inspiration" & Time < vec[33] ~ "inspiration 16",
+      Start=="inspiration" & Time < vec[34] ~ "expiration 16",
+      Start=="inspiration" & Time < vec[35] ~ "inspiration 17",
+      Start=="inspiration" & Time < vec[36] ~ "expiration 17",
+      Start=="inspiration" & Time < vec[37] ~ "inspiration 18",
+      Start=="inspiration" & Time < vec[38] ~ "expiration 18",
+      
+      Start=="expiration" & Time < vec[3] ~ "expiration 1",
+      Start=="expiration" & Time < vec[4] ~ "inspiration 2",
+      Start=="expiration" & Time < vec[5] ~ "expiration 2",
+      Start=="expiration" & Time < vec[6] ~ "inspiration 3",
+      Start=="expiration" & Time < vec[7] ~ "expiration 3",
+      Start=="expiration" & Time < vec[8] ~ "inspiration 4",
+      Start=="expiration" & Time < vec[9] ~ "expiration 4",
+      Start=="expiration" & Time < vec[10] ~ "inspiration 5",
+      Start=="expiration" & Time < vec[11] ~ "expiration 5",
+      Start=="expiration" & Time < vec[12] ~ "inspiration 6",
+      Start=="expiration" & Time < vec[13] ~ "expiration 6",
+      Start=="expiration" & Time < vec[14] ~ "inspiration 7",
+      Start=="expiration" & Time < vec[15] ~ "expiration 7",
+      Start=="expiration" & Time < vec[16] ~ "inspiration 8",
+      Start=="expiration" & Time < vec[17] ~ "expiration 8",
+      Start=="expiration" & Time < vec[18] ~ "inspiration 9",
+      Start=="expiration" & Time < vec[19] ~ "expiration 9",
+      Start=="expiration" & Time < vec[20] ~ "inspiration 10",
+      Start=="expiration" & Time < vec[21] ~ "expiration 10",
+      Start=="expiration" & Time < vec[22] ~ "inspiration 11",
+      Start=="expiration" & Time < vec[23] ~ "expiration 11",
+      Start=="expiration" & Time < vec[24] ~ "inspiration 12",
+      Start=="expiration" & Time < vec[25] ~ "expiration 12",
+      Start=="expiration" & Time < vec[26] ~ "inspiration 13",
+      Start=="expiration" & Time < vec[27] ~ "expiration 13",
+      Start=="expiration" & Time < vec[28] ~ "inspiration 14",
+      Start=="expiration" & Time < vec[29] ~ "expiration 14",
+      Start=="expiration" & Time < vec[30] ~ "inspiration 15",
+      Start=="expiration" & Time < vec[31] ~ "expiration 15",
+      Start=="expiration" & Time < vec[32] ~ "inspiration 16",
+      Start=="expiration" & Time < vec[33] ~ "expiration 16",
+      Start=="expiration" & Time < vec[34] ~ "inspiration 17",
+      Start=="expiration" & Time < vec[35] ~ "expiration 17",
+      Start=="expiration" & Time < vec[36] ~ "inspiration 18",
+      Start=="expiration" & Time < vec[37] ~ "expiration 18",
+      Start=="expiration" & Time < vec[38] ~ "inspiration 19",
+      TRUE ~ NA_character_),
+      
+      Breath = as.numeric(str_extract(BreathStep, "(\\d)+")))
+      
+      list(M.VolFlow, M.Impedance)
+  }
+```
+
+
+
+
+
+
+## `M.BreathTrim`
+
+
+```{r}
+M.BreathTrim <- function(M.VolFlow, M.Impedance){
+  
+  # Identify breaths to remove and flag them in the impedance channel
+  
+  M.Impedance <- M.Impedance %>% 
+    mutate(
+      minBreath = min(Breath, na.rm = T),
+      maxBreath = max(Breath, na.rm = T),
+      Drop1.BreathTrim = case_when(
+        Breath == minBreath | Breath == maxBreath ~ 1,
+        Breath != minBreath & Breath != maxBreath ~ 0,
+        TRUE ~ NA_real_),
+      BreathAfterTrim = case_when(
+        Breath <= minBreath ~ NA_real_,
+        Breath == maxBreath ~ NA_real_,
+        TRUE ~ Breath - minBreath)) %>% 
+   select(-minBreath, -maxBreath)
+  
+  # Flag breaths to remove in the volFlow channel
+  toAdd <- M.Impedance %>% 
+     filter(Drop1.BreathTrim==0) %>% 
+     select(Breath, Drop1.BreathTrim, BreathAfterTrim) %>% 
+     distinct()
+
+  M.VolFlow <- M.VolFlow %>% 
+     merge(toAdd, by=c("Breath"), all = T)
+  
+  list(M.VolFlow, M.Impedance)
+}
+```
+
+
+
+# 2. NO BREATHS
+
+## `M.FlatVol`
+
+
+```{r}
+M.FlatVol <- function(M.VolFlow, M.Impedance){
+
+   # Calculate the proportion
+   Prop <- M.VolFlow %>%
+     mutate(RateVol = c(NA, NA, diff(M.VolFlow$Vol,2)),
+          NoSlope = ifelse(between(RateVol, -0.0001, 0.0001),1,0)) %>% 
+     group_by(Breath) %>% 
+     summarise(total = n(),
+             n = sum(NoSlope, na.rm = T),
+             PropFlatVol = n/total) %>% 
+     select(Breath, PropFlatVol)
+   
+   # Identify the breaths that need to be drop
+   BreathsToTrim <- Prop %>% 
+     mutate(Drop = case_when(
+       PropFlatVol > 0.15 ~ 1,
+       TRUE ~ 0)) %>%
+     filter(Drop==1) %>% 
+     select(Breath) %>% t() %>% as.character()
+  
+   
+  # Flag breaths to remove in the impedance channel
+  M.Impedance <- M.Impedance %>% 
+    merge(Prop, by=c("Breath")) %>% 
+    mutate(Drop2.FlatVol = case_when(
+      is.na(Breath) ~ NA_real_,
+      Breath %in% c(BreathsToTrim) ~ 1,
+      TRUE ~ 0))
+  
+  # Flag breaths to remove in the volFlow channel
+    toAdd <- M.Impedance %>% 
+     select(Breath, Drop2.FlatVol) %>% 
+     distinct()
+
+  M.VolFlow <- M.VolFlow %>% 
+     merge(toAdd, by=c("Breath"), all = T)
+  
+  list(M.VolFlow, M.Impedance)
+}
+```
+
+
+# 3. LEAKS
+
+## `M.NoX7`
+
+
+```{r}
+M.NoX7 <- function(M.VolFlow, M.Impedance){
+
+   # Calculate the proportion
+   Prop <- M.Impedance %>% 
+    mutate(Drop = ifelse(between(X7, -1, 1) & between(X7, -1, 1), 1,0)) %>% # why do I have between twice?
+    group_by(Breath) %>% 
+    summarise(total = n(),
+              n = sum(Drop),
+              propNoX7 = n/total) %>% 
+    select(Breath, propNoX7) 
+   
+   # Identify the breaths that need to be drop
+   BreathsToTrim <- Prop %>% 
+     mutate(Drop = case_when(
+       propNoX7 > 0.15 ~ 1,
+       TRUE ~ 0)) %>%
+     filter(Drop==1) %>% 
+     select(Breath) %>% t() %>% as.character()
+  
+  # Flag breaths to remove in the impedance channel
+  M.Impedance <- M.Impedance %>% 
+    merge(Prop, by=c("Breath")) %>% 
+    mutate(Drop3.NoX7 = case_when(
+      is.na(Breath) ~ NA_real_,
+      Breath %in% c(BreathsToTrim) ~ 1,
+      TRUE ~ 0))
+  
+  # Flag breaths to remove in the volFlow channel
+  toAdd <- M.Impedance %>% 
+     select(Breath, Drop3.NoX7) %>% 
+     distinct()
+
+  M.VolFlow <- M.VolFlow %>% 
+     merge(toAdd, by=c("Breath"), all = T)
+  
+  list(M.VolFlow, M.Impedance)
+}
+```
+
+
+## `M.NoR7`
+
+
+```{r}
+M.NoR7 <- function(M.VolFlow, M.Impedance){
+
+  # calculate the proportion 
+  Prop <- M.Impedance %>% 
+    mutate(Drop = ifelse(between(R7, -1, 1) & between(R7, -1, 1), 1,0)) %>% 
+    group_by(Breath) %>% 
+    summarise(total = n(),
+              n = sum(Drop),
+              propNoR7 = n/total) %>% 
+    select(Breath, propNoR7) 
+   
+  # Identify the breaths that need to be drop
+   BreathsToTrim <- Prop %>% 
+     mutate(Drop = case_when(
+       propNoR7 > 0.15 ~ 1,
+       TRUE ~ 0)) %>%
+     filter(Drop==1) %>% 
+     select(Breath) %>% t() %>% as.character()
+  
+  # Flag breaths to remove in the impedance channels
+  M.Impedance <- M.Impedance %>% 
+    merge(Prop, by=c("Breath")) %>% 
+    mutate(Drop3.NoR7 = case_when(
+      is.na(Breath) ~ NA_real_,
+      Breath %in% c(BreathsToTrim) ~ 1,
+      TRUE ~ 0))
+  
+  # Flag breaths to remove in the volFlow channel
+  toAdd <- M.Impedance %>% 
+     select(Breath, Drop3.NoR7) %>% 
+     distinct()
+
+  M.VolFlow <- M.VolFlow %>% 
+     merge(toAdd, by=c("Breath"), all = T)
+  
+  list(M.VolFlow, M.Impedance)
+}
+```
+
+
+
+
+## `M.NegR7`
+
+```{r}
+M.NegR7 <- function(M.VolFlow, M.Impedance){
+  
+  # Identify the breaths that need to be drop
+  BreathsToTrim <- M.Impedance %>% 
+    mutate(
+       Neg = case_when(
+        R7 < 0  ~ 1,
+        TRUE ~ 0)) %>% 
+    group_by(Breath) %>% 
+    summarise(Trim = sum(Neg)) %>% 
+    filter(Trim >0) %>% 
+    select(Breath) %>% t() %>% as.character()
+  
+  # Flag breaths to remove in the impedance channels
+  M.Impedance <- M.Impedance %>% 
+    mutate(Drop3.NegR7 = case_when(
+      is.na(Breath) ~ NA_real_,
+      Breath %in% c(BreathsToTrim) ~ 1,
+      TRUE ~ 0))
+
+  # Flag breaths to remove in the volFlow channel
+  toAdd <- M.Impedance %>% 
+     select(Breath, Drop3.NegR7) %>% 
+     distinct()
+
+  M.VolFlow <- M.VolFlow %>% 
+     merge(toAdd, by=c("Breath"), all = T)
+  
+  list(M.VolFlow, M.Impedance)
+}
+```
+
+
+
+
+
+# 4. OBSTRUCTIONS
+
+## `M.OutZ7`
+
+```{r}
+M.OutZ7 <- function(M.VolFlow, M.Impedance){
+  
+  `%notin%` <- Negate(`%in%`)
+  
+  # calculate outliers
+  M.Impedance1<-M.Impedance 
+   
+  M.Impedance$OutlierLimitZ7.L = mean(M.Impedance1$Z7, na.rm= T) - 3*sd(M.Impedance1$Z7, na.rm= T)
+  M.Impedance$OutlierLimitZ7.H = mean(M.Impedance1$Z7, na.rm= T) + 3*sd(M.Impedance1$Z7, na.rm= T)
+  
+  # Identify the breaths that need to be drop
+  BreathsToTrim <- M.Impedance %>% 
+    mutate(
+       Outlier = case_when(
+        Z7 < OutlierLimitZ7.L | Z7 > OutlierLimitZ7.H ~ 1,
+        Z7 >= OutlierLimitZ7.L & Z7 <= OutlierLimitZ7.H ~ 0,
+        TRUE ~ NA_real_)) %>%
+    group_by(Breath) %>% 
+    summarise(Trim = sum(Outlier)) %>% 
+    filter(Trim >0) %>% 
+    select(Breath) %>% t() %>% as.character()
+    
+ # Flag breaths to remove in the impedance channels
+  M.Impedance <- M.Impedance %>% 
+    mutate(
+      Drop4.OutZ7 = case_when(
+        is.na(Breath) ~ NA_real_,
+        Breath %in% c(BreathsToTrim) ~ 1,
+        TRUE ~ 0))
+  
+  # Flag breaths to remove in the volFlow channel
+  toAdd <- M.Impedance %>% 
+     select(Breath, Drop4.OutZ7) %>% 
+     distinct()
+
+  M.VolFlow <- M.VolFlow %>% 
+     merge(toAdd, by=c("Breath"), all = T)
+  
+  list(M.VolFlow, M.Impedance)
+}
+```
+
+
+## `M.OutZ7.2`
+
+Do a second removal of outliers.
+
+```{r}
+ M.OutZ7.2 <- function(M.VolFlow, M.Impedance){
+   
+   `%notin%` <- Negate(`%in%`)
+   
+   # calculate outliers
+   M.Impedance1<-M.Impedance %>% 
+      filter(Drop4.OutZ7==0 | is.na(Drop4.OutZ7))
+     
+   M.Impedance$OutlierLimitZ7.L2 = mean(M.Impedance1$Z7, na.rm= T) - 3*sd(M.Impedance1$Z7, na.rm= T)
+   M.Impedance$OutlierLimitZ7.H2 = mean(M.Impedance1$Z7, na.rm= T) + 3*sd(M.Impedance1$Z7, na.rm= T) 
+     
+   # Identify the breaths that need to be drop
+   BreathsToTrim <- M.Impedance %>% 
+     mutate(
+        Outlier = case_when(
+         Z7 < OutlierLimitZ7.L2 | Z7 > OutlierLimitZ7.H2 ~ 1,
+         Z7 >= OutlierLimitZ7.L2 & Z7 <= OutlierLimitZ7.H2 ~ 0,
+         TRUE ~ NA_real_)) %>%
+     group_by(Breath) %>% 
+     summarise(Trim = sum(Outlier)) %>% 
+     filter(Trim >0) %>% 
+     select(Breath) %>% t() %>% as.character()
+     
+  # Flag breaths to remove in the impedance channels
+   M.Impedance <- M.Impedance %>% 
+     mutate(
+       Drop4.OutZ7.2 = case_when(
+         is.na(Breath) ~ NA_real_,
+         Breath %in% c(BreathsToTrim) ~ 1,
+         TRUE ~ 0))
+   
+   # Flag breaths to remove in the volFlow channel
+   toAdd <- M.Impedance %>% 
+      select(Breath, Drop4.OutZ7.2) %>% 
+      distinct()
+ 
+   M.VolFlow <- M.VolFlow %>% 
+      merge(toAdd, by=c("Breath"), all = T)
+   
+   list(M.VolFlow, M.Impedance)
+ }
+```
+
+
+## `M.OutZ7.3`
+
+Do a third removal of outliers.
+
+```{r}
+ M.OutZ7.3 <- function(M.VolFlow, M.Impedance){
+   
+   `%notin%` <- Negate(`%in%`)
+   
+   # calculate outliers
+   M.Impedance1<-M.Impedance %>% 
+      filter(Drop4.OutZ7==0 | is.na(Drop4.OutZ7)) %>% 
+      filter(Drop4.OutZ7.2==0 | is.na(Drop4.OutZ7.2))
+     
+   M.Impedance$OutlierLimitZ7.L3 = mean(M.Impedance1$Z7, na.rm= T) - 3*sd(M.Impedance1$Z7, na.rm= T)
+   M.Impedance$OutlierLimitZ7.H3 = mean(M.Impedance1$Z7, na.rm= T) + 3*sd(M.Impedance1$Z7, na.rm= T) 
+     
+   # Identify the breaths that need to be drop
+   BreathsToTrim <- M.Impedance %>% 
+     mutate(
+        Outlier = case_when(
+         Z7 < OutlierLimitZ7.L3 | Z7 > OutlierLimitZ7.H3 ~ 1,
+         Z7 >= OutlierLimitZ7.L3 & Z7 <= OutlierLimitZ7.H3 ~ 0,
+         TRUE ~ NA_real_)) %>%
+     group_by(Breath) %>% 
+     summarise(Trim = sum(Outlier)) %>% 
+     filter(Trim >0) %>% 
+     select(Breath) %>% t() %>% as.character()
+     
+  # Flag breaths to remove in the impedance channels
+   M.Impedance <- M.Impedance %>% 
+     mutate(
+       Drop4.OutZ7.3 = case_when(
+         is.na(Breath) ~ NA_real_,
+         Breath %in% c(BreathsToTrim) ~ 1,
+         TRUE ~ 0))
+   
+   # Flag breaths to remove in the volFlow channel
+   toAdd <- M.Impedance %>% 
+      select(Breath, Drop4.OutZ7.3) %>% 
+      distinct()
+ 
+   M.VolFlow <- M.VolFlow %>% 
+      merge(toAdd, by=c("Breath"), all = T)
+   
+   list(M.VolFlow, M.Impedance)
+ }
+```
+
+
+
+## `M.OutR7`
+
+```{r}
+M.OutR7 <- function(M.VolFlow, M.Impedance){
+  
+  `%notin%` <- Negate(`%in%`)
+  
+  # calculate outliers
+  M.Impedance1<-M.Impedance 
+  
+  M.Impedance$OutlierLimitR7.L = mean(M.Impedance1$R7, na.rm= T) - 3*sd(M.Impedance1$R7, na.rm= T)
+  M.Impedance$OutlierLimitR7.H = mean(M.Impedance1$R7, na.rm= T) + 3*sd(M.Impedance1$R7, na.rm= T)
+  
+  # Identify the breaths that need to be drop
+  BreathsToTrim <- M.Impedance %>% 
+    mutate(
+       Outlier = case_when(
+        R7 < OutlierLimitR7.L | R7 > OutlierLimitR7.H ~ 1,
+        R7 >= OutlierLimitR7.L & R7 <= OutlierLimitR7.H ~ 0,
+        TRUE ~ NA_real_)) %>%
+    group_by(Breath) %>% 
+    summarise(Trim = sum(Outlier)) %>% 
+    filter(Trim >0) %>% 
+    select(Breath) %>% t() %>% as.character()
+    
+ # Flag breaths to remove in the impedance channels
+  M.Impedance <- M.Impedance %>% 
+    mutate(
+      Drop4.OutR7 = case_when(
+        is.na(Breath) ~ NA_real_,
+        Breath %in% c(BreathsToTrim) ~ 1,
+        TRUE ~ 0))
+  
+  # Flag breaths to remove in the volFlow channel
+  toAdd <- M.Impedance %>% 
+     select(Breath, Drop4.OutR7) %>% 
+     distinct()
+
+  M.VolFlow <- M.VolFlow %>% 
+     merge(toAdd, by=c("Breath"), all = T)
+  
+  list(M.VolFlow, M.Impedance)
+}
+```
+
+
+## `M.OutR7.2`
+
+Do a second removal of outliers.
+
+```{r}
+ M.OutR7.2 <- function(M.VolFlow, M.Impedance){
+   
+   `%notin%` <- Negate(`%in%`)
+   
+   # calculate outliers
+   M.Impedance1<-M.Impedance %>% 
+      filter(Drop4.OutR7==0 | is.na(Drop4.OutR7))
+     
+   M.Impedance$OutlierLimitR7.L2 = mean(M.Impedance1$R7, na.rm= T) - 3*sd(M.Impedance1$R7, na.rm= T)
+   M.Impedance$OutlierLimitR7.H2 = mean(M.Impedance1$R7, na.rm= T) + 3*sd(M.Impedance1$R7, na.rm= T) 
+   
+   # Identify the breaths that need to be drop
+   BreathsToTrim <- M.Impedance %>% 
+     mutate(
+        Outlier = case_when(
+         R7 < OutlierLimitR7.L2 | R7 > OutlierLimitR7.H2 ~ 1,
+         R7 >= OutlierLimitR7.L2 & R7 <= OutlierLimitR7.H2 ~ 0,
+         TRUE ~ NA_real_)) %>%
+     group_by(Breath) %>% 
+     summarise(Trim = sum(Outlier)) %>% 
+     filter(Trim >0) %>% 
+     select(Breath) %>% t() %>% as.character()
+     
+  # Flag breaths to remove in the impedance channels
+ M.Impedance <- M.Impedance %>% 
+     mutate(
+       Drop4.OutR7.2 = case_when(
+         is.na(Breath) ~ NA_real_,
+         Breath %in% c(BreathsToTrim) ~ 1,
+         TRUE ~ 0))
+   
+   # Flag breaths to remove in the volFlow channel
+   toAdd <- M.Impedance %>% 
+      select(Breath, Drop4.OutR7.2) %>% 
+      distinct()
+ 
+   M.VolFlow <- M.VolFlow %>% 
+      merge(toAdd, by=c("Breath"), all = T)
+   
+   list(M.VolFlow, M.Impedance)
+ }
+```
+
+
+## `M.OutR7.3`
+
+Do a third iteration of removal of outliers.
+
+```{r}
+ M.OutR7.3 <- function(M.VolFlow, M.Impedance){
+   
+   `%notin%` <- Negate(`%in%`)
+   
+   # calculate outliers
+   M.Impedance1<-M.Impedance %>% 
+      filter(Drop4.OutR7==0 | is.na(Drop4.OutR7)) %>% 
+      filter(Drop4.OutR7.2==0 | is.na(Drop4.OutR7.2))
+     
+   M.Impedance$OutlierLimitR7.L3 = mean(M.Impedance1$R7, na.rm= T) - 3*sd(M.Impedance1$R7, na.rm= T)
+   M.Impedance$OutlierLimitR7.H3 = mean(M.Impedance1$R7, na.rm= T) + 3*sd(M.Impedance1$R7, na.rm= T) 
+   
+   # Identify the breaths that need to be drop
+   BreathsToTrim <- M.Impedance %>% 
+     mutate(
+        Outlier = case_when(
+         R7 < OutlierLimitR7.L3 | R7 > OutlierLimitR7.H3 ~ 1,
+         R7 >= OutlierLimitR7.L3 & R7 <= OutlierLimitR7.H3 ~ 0,
+         TRUE ~ NA_real_)) %>%
+     group_by(Breath) %>% 
+     summarise(Trim = sum(Outlier)) %>% 
+     filter(Trim >0) %>% 
+     select(Breath) %>% t() %>% as.character()
+     
+  # Flag breaths to remove in the impedance channels
+ M.Impedance <- M.Impedance %>% 
+     mutate(
+       Drop4.OutR7.3 = case_when(
+         is.na(Breath) ~ NA_real_,
+         Breath %in% c(BreathsToTrim) ~ 1,
+         TRUE ~ 0))
+   
+   # Flag breaths to remove in the volFlow channel
+   toAdd <- M.Impedance %>% 
+      select(Breath, Drop4.OutR7.3) %>% 
+      distinct()
+ 
+   M.VolFlow <- M.VolFlow %>% 
+      merge(toAdd, by=c("Breath"), all = T)
+   
+   list(M.VolFlow, M.Impedance)
+ }
+```
+
+
+## `M.OutX7`
+
+```{r}
+M.OutX7 <- function(M.VolFlow, M.Impedance){
+  
+  `%notin%` <- Negate(`%in%`)
+  
+  # calculate outliers
+  M.Impedance1<-M.Impedance 
+  
+  M.Impedance$OutlierLimitX7.L = mean(M.Impedance1$X7, na.rm= T) - 3*sd(M.Impedance1$X7, na.rm= T)
+  M.Impedance$OutlierLimitX7.H = mean(M.Impedance1$X7, na.rm= T) + 3*sd(M.Impedance1$X7, na.rm= T)
+  
+  # Identify the breaths that need to be drop
+  BreathsToTrim <- M.Impedance %>% 
+    mutate(
+       Outlier = case_when(
+        X7 < OutlierLimitX7.L | X7 > OutlierLimitX7.H ~ 1,
+        X7 >= OutlierLimitX7.L & X7 <= OutlierLimitX7.H ~ 0,
+        TRUE ~ NA_real_)) %>%
+    group_by(Breath) %>% 
+    summarise(Trim = sum(Outlier)) %>% 
+    filter(Trim >0) %>% 
+    select(Breath) %>% t() %>% as.character()
+    
+ # Flag breaths to remove in the impedance channels
+  M.Impedance <- M.Impedance %>% 
+    mutate(
+      Drop4.OutX7 = case_when(
+        is.na(Breath) ~ NA_real_,
+        Breath %in% c(BreathsToTrim) ~ 1,
+        TRUE ~ 0))
+  
+  # Flag breaths to remove in the volFlow channel
+  toAdd <- M.Impedance %>% 
+     select(Breath, Drop4.OutX7) %>% 
+     distinct()
+
+  M.VolFlow <- M.VolFlow %>% 
+     merge(toAdd, by=c("Breath"), all = T)
+  
+  list(M.VolFlow, M.Impedance)
+}
+```
+
+
+## `M.OutX7.2`
+
+Do a second removal of outliers.
+
+```{r}
+ M.OutX7.2 <- function(M.VolFlow, M.Impedance){
+   
+   `%notin%` <- Negate(`%in%`)
+   
+   # calculate outliers
+   M.Impedance1<-M.Impedance %>% 
+      filter(Drop4.OutX7==0 | is.na(Drop4.OutX7))
+     
+   M.Impedance$OutlierLimitX7.L2 = mean(M.Impedance1$X7, na.rm= T) - 3*sd(M.Impedance1$X7, na.rm= T)
+   M.Impedance$OutlierLimitX7.H2 = mean(M.Impedance1$X7, na.rm= T) + 3*sd(M.Impedance1$X7, na.rm= T) 
+     
+   # Identify the breaths that need to be drop
+   BreathsToTrim <- M.Impedance %>% 
+     mutate(
+        Outlier = case_when(
+         X7 < OutlierLimitX7.L2 | X7 > OutlierLimitX7.H2 ~ 1,
+         X7 >= OutlierLimitX7.L2 & X7 <= OutlierLimitX7.H2 ~ 0,
+         TRUE ~ NA_real_)) %>%
+     group_by(Breath) %>% 
+     summarise(Trim = sum(Outlier)) %>% 
+     filter(Trim >0) %>% 
+     select(Breath) %>% t() %>% as.character()
+     
+  # Flag breaths to remove in the impedance channels
+   M.Impedance <- M.Impedance %>% 
+     mutate(
+       Drop4.OutX7.2 = case_when(
+         is.na(Breath) ~ NA_real_,
+         Breath %in% c(BreathsToTrim) ~ 1,
+         TRUE ~ 0))
+   
+   # Flag breaths to remove in the volFlow channel
+   toAdd <- M.Impedance %>% 
+      select(Breath, Drop4.OutX7.2) %>% 
+      distinct()
+ 
+   M.VolFlow <- M.VolFlow %>% 
+      merge(toAdd, by=c("Breath"), all = T)
+   
+   list(M.VolFlow, M.Impedance)
+ }
+```
+
+## `M.OutX7.3`
+
+Do a second removal of outliers.
+
+```{r}
+ M.OutX7.3 <- function(M.VolFlow, M.Impedance){
+   
+   `%notin%` <- Negate(`%in%`)
+   
+   # calculate outliers
+   M.Impedance1<-M.Impedance %>% 
+      filter(Drop4.OutX7==0 | is.na(Drop4.OutX7))  %>% 
+      filter(Drop4.OutX7.2==0 | is.na(Drop4.OutX7.2))
+     
+   M.Impedance$OutlierLimitX7.L3 = mean(M.Impedance1$X7, na.rm= T) - 3*sd(M.Impedance1$X7, na.rm= T)
+   M.Impedance$OutlierLimitX7.H3 = mean(M.Impedance1$X7, na.rm= T) + 3*sd(M.Impedance1$X7, na.rm= T) 
+     
+   # Identify the breaths that need to be drop
+   BreathsToTrim <- M.Impedance %>% 
+     mutate(
+        Outlier = case_when(
+         X7 < OutlierLimitX7.L3 | X7 > OutlierLimitX7.H3 ~ 1,
+         X7 >= OutlierLimitX7.L3 & X7 <= OutlierLimitX7.H3 ~ 0,
+         TRUE ~ NA_real_)) %>%
+     group_by(Breath) %>% 
+     summarise(Trim = sum(Outlier)) %>% 
+     filter(Trim >0) %>% 
+     select(Breath) %>% t() %>% as.character()
+     
+  # Flag breaths to remove in the impedance channels
+   M.Impedance <- M.Impedance %>% 
+     mutate(
+       Drop4.OutX7.3 = case_when(
+         is.na(Breath) ~ NA_real_,
+         Breath %in% c(BreathsToTrim) ~ 1,
+         TRUE ~ 0))
+   
+   # Flag breaths to remove in the volFlow channel
+   toAdd <- M.Impedance %>% 
+      select(Breath, Drop4.OutX7.3) %>% 
+      distinct()
+ 
+   M.VolFlow <- M.VolFlow %>% 
+      merge(toAdd, by=c("Breath"), all = T)
+   
+   list(M.VolFlow, M.Impedance)
+ }
+```
+
+
+
+# 5. ENOUGH BREATHS 
+
+## `M.KeepMeasure`
+
+```{r}
+M.KeepMeasure <- function(M.VolFlow, M.Impedance){
+
+# calculate the number of breaths remaining
+BreathNum <- M.Impedance %>% 
+  filter(DropBreath.SDExt==0) %>% 
+  select(Breath) %>% 
+  distinct(Breath) %>% 
+  count() %>% as.numeric()
+
+M.Impedance <- M.Impedance %>% 
+  mutate(KeepMeasure.SDExt = ifelse(BreathNum>=4,1,0))
+
+BreathNum <- M.Impedance %>% 
+  filter(DropBreath.SD==0) %>% 
+  select(Breath) %>% 
+  distinct(Breath) %>% 
+  count() %>% as.numeric()
+
+M.Impedance <- M.Impedance %>% 
+  mutate(KeepMeasure.SD = ifelse(BreathNum>=4,1,0))
+
+
+
+# calculate the number of breaths remaining
+BreathNum <- M.VolFlow %>% 
+  filter(DropBreath.SDExt==0) %>% 
+  select(Breath) %>% 
+  distinct(Breath) %>% 
+  count() %>% as.numeric()
+
+M.VolFlow <- M.VolFlow %>% 
+  mutate(KeepMeasure.SDExt = ifelse(BreathNum>=4,1,0))
+
+BreathNum <- M.VolFlow %>% 
+  filter(DropBreath.SD==0) %>% 
+  select(Breath) %>% 
+  distinct(Breath) %>% 
+  count() %>% as.numeric()
+
+M.VolFlow <- M.VolFlow %>% 
+  mutate(KeepMeasure.SD = ifelse(BreathNum>=4,1,0))
+
+  list(M.VolFlow, M.Impedance)
+}
+
+
+```
+
+
+
+
+# 6 SUMMARY STEPS 1-5
+
+## `M.AllSteps`
+
+```{r}
+M.AllSteps <- function(M.VolFlow, M.Impedance){
+  
+  M.Impedance <- M.Impedance %>%  
+  mutate(Z7 = sqrt(R7^2 + X7^2)) 
+  
+  # Apply function: Breath detect
+  clean <- M.BreathDetect(M.VolFlow, M.Impedance)
+  M.VolFlow <- clean[[1]]
+  M.Impedance <- clean[[2]]
+  
+  # Apply function: trim ends
+  clean <- M.BreathTrim(M.VolFlow, M.Impedance)
+  M.VolFlow <- clean[[1]]
+  M.Impedance <- clean[[2]]
+  
+  # Apply function: No breaths
+  clean <- M.FlatVol(M.VolFlow, M.Impedance)
+  M.VolFlow <- clean[[1]]
+  M.Impedance <- clean[[2]]
+  
+  # Apply function: Leaks
+  clean <- M.NoX7(M.VolFlow, M.Impedance)
+  M.VolFlow <- clean[[1]]
+  M.Impedance <- clean[[2]]
+  
+  clean <- M.NoR7(M.VolFlow, M.Impedance)
+  M.VolFlow <- clean[[1]]
+  M.Impedance <- clean[[2]]
+  
+  clean <- M.NegR7(M.VolFlow, M.Impedance)
+  M.VolFlow <- clean[[1]]
+  M.Impedance <- clean[[2]]
+  
+
+  # Apply function: Obstructions
+  clean <- M.OutX7(M.VolFlow, M.Impedance)
+  M.VolFlow <- clean[[1]]
+  M.Impedance <- clean[[2]]
+  
+  clean <- M.OutR7(M.VolFlow, M.Impedance)
+  M.VolFlow <- clean[[1]]
+  M.Impedance <- clean[[2]]
+  
+  clean <- M.OutZ7(M.VolFlow, M.Impedance)
+  M.VolFlow <- clean[[1]]
+  M.Impedance <- clean[[2]]
+  
+
+  # Apply function: Obstructions.2 second pass
+  clean <- M.OutX7.2(M.VolFlow, M.Impedance)
+  M.VolFlow <- clean[[1]]
+  M.Impedance <- clean[[2]]
+   
+  clean <- M.OutR7.2(M.VolFlow, M.Impedance)
+  M.VolFlow <- clean[[1]]
+  M.Impedance <- clean[[2]]
+   
+  clean <- M.OutZ7.2(M.VolFlow, M.Impedance)
+  M.VolFlow <- clean[[1]]
+  M.Impedance <- clean[[2]]
+  
+   # Apply function: Obstructions.3 third pass
+  clean <- M.OutX7.3(M.VolFlow, M.Impedance)
+  M.VolFlow <- clean[[1]]
+  M.Impedance <- clean[[2]]
+   
+  clean <- M.OutR7.3(M.VolFlow, M.Impedance)
+  M.VolFlow <- clean[[1]]
+  M.Impedance <- clean[[2]]
+   
+  clean <- M.OutZ7.3(M.VolFlow, M.Impedance)
+  M.VolFlow <- clean[[1]]
+  M.Impedance <- clean[[2]]
+  
+
+# Calculate a unique variable to flag breaths to be dropped
+# SDExt
+
+    M.Impedance <- M.Impedance %>% 
+    mutate(
+      DropBreath.SDExt = factor(case_when(
+         Drop1.BreathTrim == 1 |
+         Drop2.FlatVol == 1 |  
+         # Leaks
+         Drop3.NegR7==1 | Drop3.NoR7==1 | Drop3.NoX7==1 |  
+         # Obstructions
+         Drop4.OutZ7 == 1 | Drop4.OutR7 == 1 | Drop4.OutX7 == 1 |
+         Drop4.OutZ7.2 == 1 | Drop4.OutR7.2 == 1 | Drop4.OutX7.2 == 1 |
+         Drop4.OutZ7.3 == 1 | Drop4.OutR7.3 == 1 | Drop4.OutX7.3 == 1  ~ 1,
+     
+         Drop1.BreathTrim == 0 &
+         Drop2.FlatVol == 0 &  
+         # Leaks
+         Drop3.NegR7==0 & Drop3.NoR7==0 & Drop3.NoX7==0 & 
+         # Obstructions
+         Drop4.OutZ7 == 0 & Drop4.OutR7 == 0 & Drop4.OutX7 == 0 &
+         Drop4.OutZ7.2 == 0 & Drop4.OutR7.2 == 0 & Drop4.OutX7.2 == 0 &
+         Drop4.OutZ7.3 == 0 & Drop4.OutR7.3 == 0 & Drop4.OutX7.3 == 0 ~ 0,
+         TRUE ~ NA_real_)))
+  
+  
+  
+# SD
+  M.Impedance <- M.Impedance %>% 
+    mutate(
+      DropBreath.SD = factor(case_when(
+         Drop1.BreathTrim == 1 |
+         Drop2.FlatVol == 1 |  
+         # Leaks
+         Drop3.NegR7==1 |
+         # Obstructions
+         Drop4.OutZ7 == 1 | Drop4.OutR7 == 1 | Drop4.OutX7 == 1 |
+         Drop4.OutZ7.2 == 1 | Drop4.OutR7.2 == 1 | Drop4.OutX7.2 == 1 |
+         Drop4.OutZ7.3 == 1 | Drop4.OutR7.3 == 1 | Drop4.OutX7.3 == 1  ~ 1,
+     
+         Drop1.BreathTrim == 0 &
+         Drop2.FlatVol == 0 &  
+         # Leaks
+         Drop3.NegR7==0 & 
+         
+         # Obstructions
+         Drop4.OutZ7 == 0 & Drop4.OutR7 == 0 & Drop4.OutX7 == 0 &
+         Drop4.OutZ7.2 == 0 & Drop4.OutR7.2 == 0 & Drop4.OutX7.2 == 0 &
+         Drop4.OutZ7.3 == 0 & Drop4.OutR7.3 == 0 & Drop4.OutX7.3 == 0 ~ 0,
+     
+        TRUE ~ NA_real_)) 
+      
+      ) 
+  
+
+# SDExt - VolFlow
+  M.VolFlow <- M.VolFlow %>% 
+    mutate(
+      DropBreath.SDExt = factor(case_when(
+         !is.na(Breath) & is.na(BreathAfterTrim) == 1 |
+         Drop1.BreathTrim == 1 |
+         Drop2.FlatVol == 1 |  
+         # Leaks
+         Drop3.NegR7==1 | Drop3.NoR7==1 | Drop3.NoX7==1 | 
+         
+         # Obstructions
+         Drop4.OutZ7 == 1 | Drop4.OutR7 == 1 | Drop4.OutX7 == 1 |
+         Drop4.OutZ7.2 == 1 | Drop4.OutR7.2 == 1 | Drop4.OutX7.2 == 1 |
+         Drop4.OutZ7.3 == 1 | Drop4.OutR7.3 == 1 | Drop4.OutX7.3 == 1  ~ 1,
+     
+         Drop1.BreathTrim == 0 &
+         Drop2.FlatVol == 0 &  
+         # Leaks
+         Drop3.NegR7==0 & Drop3.NoR7==0 & Drop3.NoX7==0 &
+         
+         # Obstructions
+         Drop4.OutZ7 == 0 & Drop4.OutR7 == 0 & Drop4.OutX7 == 0 &
+         Drop4.OutZ7.2 == 0 & Drop4.OutR7.2 == 0 & Drop4.OutX7.2 == 0 &
+         Drop4.OutZ7.3 == 0 & Drop4.OutR7.3 == 0 & Drop4.OutX7.3 == 0  ~ 0,
+     
+        TRUE ~ NA_real_)) #,
+      
+      ) 
+
+# SD - VolFlow
+  M.VolFlow <- M.VolFlow %>% 
+    mutate(
+      DropBreath.SD = factor(case_when(
+         !is.na(Breath) & is.na(BreathAfterTrim) == 1 |
+         Drop1.BreathTrim == 1 |
+         Drop2.FlatVol == 1 |  
+         # Leaks
+         Drop3.NegR7==1 | 
+          
+         # Obstructions
+         Drop4.OutZ7 == 1 | Drop4.OutR7 == 1 | Drop4.OutX7 == 1 |
+         Drop4.OutZ7.2 == 1 | Drop4.OutR7.2 == 1 | Drop4.OutX7.2 == 1 |
+         Drop4.OutZ7.3 == 1 | Drop4.OutR7.3 == 1 | Drop4.OutX7.3 == 1  ~ 1,
+     
+         Drop1.BreathTrim == 0 &
+         Drop2.FlatVol == 0 &  
+         # Leaks
+         Drop3.NegR7==0 & 
+         
+         # Obstructions
+         Drop4.OutZ7 == 0 & Drop4.OutR7 == 0 & Drop4.OutX7 == 0 &
+         Drop4.OutZ7.2 == 0 & Drop4.OutR7.2 == 0 & Drop4.OutX7.2 == 0 &
+         Drop4.OutZ7.3 == 0 & Drop4.OutR7.3 == 0 & Drop4.OutX7.3 == 0  ~ 0,
+     
+        TRUE ~ NA_real_)) #,
+      
+      ) 
+  
+
+  
+  clean <- M.KeepMeasure(M.VolFlow, M.Impedance)
+  M.VolFlow <- clean[[1]]
+  M.Impedance <- clean[[2]]
+  
+  
+  list(M.VolFlow, M.Impedance)
+}
+
+```
+
+
+
+
+# 7. PLOTS
+
+## `M.PlotVolChannel` 
+
+Plots the volumne channel and identifies the start an end of each breath.
+
+
+```{r}
+M.PlotVolChannel <- function(M.VolFlow) {
+
+  BreathLimits <- M.VolFlow %>% 
+    filter(!is.na(Breath)) %>% 
+    arrange(Time) %>% 
+    distinct(Breath, .keep_all = T) %>%
+    select(Breath, BreathStep, BreathAfterTrim, Time, Rate) %>% 
+    filter(str_detect(BreathStep, "inspiration")) %>%
+    mutate(Time = replace(Time, Time==0, NA))
+    
+ M.VolFlow %>% 
+   arrange(Time) %>% 
+   mutate(DropBreath = factor(DropBreath.SDExt, levels=c(0,1), labels= c("To keep", "To drop"))) %>% 
+ ggplot(.) +
+    
+    annotate("rect", fill="#dcd2d2", alpha=0.6,
+             xmin=1, xmax=19, 
+             ymin=min(M.VolFlow$Vol), ymax=max(M.VolFlow$Vol)) +
+    
+    geom_line(aes(x=Time, y=Vol, color=DropBreath, group=1), linewidth=0.5) +
+    
+    geom_vline(xintercept = BreathLimits$Time, linetype="longdash") +
+    geom_hline(yintercept = 0, linetype="longdash") +
+    
+    annotate("text", x=BreathLimits$Time+0.3, y=0.4, 
+             label=BreathLimits$BreathAfterTrim, 
+             color="#5510B4") +
+  
+    scale_x_continuous(breaks = seq(0,20,1), limits = c(0,20)) +
+    #scale_y_continuous(breaks = seq(-0.5, 0.5, 0.1), limits = c(-0.5, 0.5)) +
+    scale_color_manual(values = c("To keep"="#24cf15", "To drop"="#d431a8")) +
+   
+   labs(color= "", x="Time (s)", y="Vol (L)") +
+    
+    theme(panel.background = element_blank(),
+          axis.line = element_line(colour = "black"),
+          legend.position="bottom")
+
+}
+ 
+```
+
+
+
+
+
+## `M.PlotFlowChannel`
+
+
+
+```{r}
+M.PlotFlowChannel <- function(M.VolFlow) {
+
+  BreathLimits <- M.VolFlow %>% 
+    filter(!is.na(Breath)) %>% 
+    arrange(Time) %>% 
+    distinct(Breath, .keep_all = T) %>%
+    select(Breath, BreathStep, BreathAfterTrim, Time, Rate) %>% 
+    filter(str_detect(BreathStep, "inspiration")) %>%
+    mutate(Time = replace(Time, Time==0, NA))
+
+  M.VolFlow %>% 
+    arrange(Time) %>% 
+    mutate(DropBreath = factor(DropBreath.SDExt, levels=c(0,1), labels= c("To keep", "To drop"))) %>% 
+  ggplot(.) +
+    
+    annotate("rect", fill="#dcd2d2", alpha=0.6,
+             xmin=1, xmax=19, 
+             ymin=min(M.VolFlow$Flow), ymax=max(M.VolFlow$Flow)) +
+    
+    geom_path(aes(x=Time, y=Flow, col=DropBreath, group=1), linewidth=0.2) +
+    
+    geom_vline(xintercept = BreathLimits$Time, linetype="longdash") +
+    geom_hline(yintercept = 0, linetype="longdash") +
+    
+    annotate("text", x=BreathLimits$Time+0.3, y=0.7, 
+             label=BreathLimits$BreathAfterTrim, 
+             color="#5510B4") +
+  
+    scale_x_continuous(breaks = seq(0,20,1), limits = c(0,20)) +
+    scale_y_continuous(breaks = seq(-0.8,0.8,0.4), limits = c(-0.8,0.8)) +
+    scale_color_manual(values = c("To keep"="#24cf15", "To drop"="#d431a8")) +
+    
+    labs(x="Time (s)", y="Flow (L/s)") +
+    
+    theme(panel.background = element_blank(),
+        axis.line = element_line(colour = "black"),
+        legend.position="none")
+
+}
+ 
+```
+
+
+## `M.PlotZ7Channel` 
+
+
+
+
+```{r}
+M.PlotZ7Channel <- function(M.Impedance) {
+
+  BreathLimits <- M.Impedance %>% 
+    filter(!is.na(Breath)) %>% 
+    arrange(Time) %>% 
+    distinct(Breath, .keep_all = T) %>%
+    select(Breath, BreathStep, BreathAfterTrim, Time) %>% 
+    filter(str_detect(BreathStep, "inspiration")) %>%
+    mutate(Time = replace(Time, Time==1, NA))
+
+  max <- paste0("mx:", round(max(M.Impedance$Z7),1))
+  min <- paste0("mn:", round(min(M.Impedance$Z7),1))
+  
+  M.Impedance <- M.Impedance %>% 
+    mutate(
+      insideZ7 = case_when(
+         Z7 > 57 ~ NA_real_,
+         Z7 < 0 ~ NA_real_,
+         TRUE ~ Z7),
+      outsideZ7 = case_when(
+         Z7 > 57 ~ 62,
+         Z7 < 0 ~ -2,
+         TRUE ~ NA_real_),
+      DropBreath = factor(DropBreath.SDExt, levels=c(0,1), labels= c("To keep", "To drop"))) %>% 
+    arrange(Time)
+  
+  ggplot(M.Impedance) +
+    annotate("rect", fill="#dcd2d2", alpha=0.6,
+             xmin=1, xmax=19, 
+             ymin=min(M.Impedance$Z7), ymax=max(M.Impedance$Z7)) +
+    
+    geom_line(aes(x=Time, y=Z7, col=DropBreath, group=1)) +
+    geom_point(aes(x=Time, y=insideZ7, col=DropBreath)) +
+    geom_point(aes(x=Time, y=outsideZ7, col=DropBreath), shape=1) +
+    
+    geom_vline(xintercept = BreathLimits$Time, linetype="longdash") +
+    geom_hline(yintercept = 0, linetype="longdash") +
+    
+    annotate("text", x=BreathLimits$Time+0.3, y=57, 
+             label=BreathLimits$BreathAfterTrim, 
+             color="#5510B4") +
+  
+    annotate("text", label=max, color="blue",
+             x=0.2, y=60-2) +
+    annotate("text", label=min, color="blue",
+             x=0.2, y=0+4) +
+    
+    scale_x_continuous(breaks = seq(0,20,1), limits = c(0,20)) +
+    scale_y_continuous(breaks = seq(0,60,10), limits = c(-2,62)) +
+    
+    scale_color_manual(values = c( "To keep"="#24cf15", "To drop"="#d431a8")) +
+    
+    labs(x="Time (s)", y="Z7 (cmH20.S/L)") +
+    
+    theme(panel.background = element_blank(),
+        axis.line = element_line(colour = "black"),
+        legend.position = "none")
+
+}
+ 
+```
+
+
+## `M.PlotR7Channel` 
+
+```{r}
+M.PlotR7Channel <- function(M.Impedance) {
+
+  BreathLimits <- M.Impedance %>% 
+    filter(!is.na(Breath)) %>% 
+    arrange(Time) %>% 
+    distinct(Breath, .keep_all = T) %>%
+    select(Breath, BreathStep, BreathAfterTrim, Time) %>% 
+    filter(str_detect(BreathStep, "inspiration")) %>%
+    mutate(Time = replace(Time, Time==1, NA))
+
+  max <- paste0("mx:", round(max(M.Impedance$R7),1))
+  min <- paste0("mn:", round(min(M.Impedance$R7),1))
+
+  M.Impedance <- M.Impedance %>% 
+    mutate(
+      insideR7 = case_when(
+         R7 > 47 ~ NA_real_,
+         R7 < -2 ~ NA_real_,
+         TRUE ~ R7),
+      outsideR7 = case_when(
+         R7 > 47 ~ 52,
+         R7 < -2 ~ -7,
+         TRUE ~ NA_real_),
+      DropBreath = factor(DropBreath.SDExt, levels=c(0,1), labels= c("To keep", "To drop"))) %>% 
+    arrange(Time)
+  
+  ggplot(M.Impedance) +
+    
+    annotate("rect", fill="#dcd2d2", alpha=0.6,
+             xmin=1, xmax=19, 
+             ymin=min(M.Impedance$R7), ymax=max(M.Impedance$R7)) +
+    
+    geom_line(aes(x=Time, y=R7, col=DropBreath, group=1)) +
+    geom_point(aes(x=Time, y=insideR7, col=DropBreath)) +
+    geom_point(aes(x=Time, y=outsideR7, col=DropBreath), shape=1) +
+    
+    geom_vline(xintercept = BreathLimits$Time, linetype="longdash") +
+    geom_hline(yintercept = 0, linetype="longdash") +
+    
+    annotate("text", x=BreathLimits$Time+0.3, y=47, 
+             label=BreathLimits$BreathAfterTrim, 
+             color="#5510B4") +
+  
+    annotate("text", label=max, color="blue",
+             x=0.2, y=50-2) +
+    annotate("text", label=min, color="blue",
+             x=0.2, y=-6) +
+  
+    scale_x_continuous(breaks = seq(0,20,1), limits = c(0,20)) +
+    scale_y_continuous(breaks = seq(-5,50,5), limits = c(-7,52)) +
+    
+    scale_color_manual(values = c( "To keep"="#24cf15", "To drop"="#d431a8")) +
+    
+    labs(x="Time (s)", y="R7 (cmH20.S/L)") +
+    
+    theme(panel.background = element_blank(),
+        axis.line = element_line(colour = "black"),
+        legend.position = "none")
+
+}
+ 
+```
+
+
+
+## `M.PlotX7Channel` 
+
+```{r}
+M.PlotX7Channel <- function(M.Impedance) {
+
+  BreathLimits <- M.Impedance %>% 
+    filter(!is.na(Breath)) %>% 
+    arrange(Time) %>% 
+    distinct(Breath, .keep_all = T) %>%
+    select(Breath, BreathStep, BreathAfterTrim, Time) %>% 
+    filter(str_detect(BreathStep, "inspiration")) %>%
+    mutate(Time = replace(Time, Time==1, NA))
+
+  max <- paste0("mx:", round(max(M.Impedance$X7),1))
+  min <- paste0("mn:", round(min(M.Impedance$X7),1))
+
+  
+  M.Impedance <- M.Impedance %>% 
+    mutate(
+      insideX7 = case_when(
+         X7 > 7 ~ NA_real_,
+         X7 < -37 ~ NA_real_,
+         TRUE ~ X7),
+      outsideX7 = case_when(
+         X7 > 7 ~ 12,
+         X7 < -37 ~ -42,
+         TRUE ~ NA_real_),
+      DropBreath = factor(DropBreath.SDExt, levels=c(0,1), labels= c("To keep", "To drop"))) %>% 
+    arrange(Time)
+  
+  ggplot(M.Impedance) +
+    
+    annotate("rect", fill="#dcd2d2", alpha=0.6,
+             xmin=1, xmax=19, 
+             ymin=min(M.Impedance$X7), ymax=max(M.Impedance$X7)) +
+    
+    geom_line(aes(x=Time, y=X7, col=DropBreath, group=1)) +
+    geom_point(aes(x=Time, y=insideX7, col=DropBreath)) +
+    geom_point(aes(x=Time, y=outsideX7, col=DropBreath), shape=1) +
+    
+    geom_vline(xintercept = BreathLimits$Time, linetype="longdash") +
+    geom_hline(yintercept = 0, linetype="longdash") +
+    
+    annotate("text", x=BreathLimits$Time+0.3, y=-37, 
+             label=BreathLimits$BreathAfterTrim, 
+             color="#5510B4") +
+  
+    annotate("text", label=max, color="blue",
+             x=0.2, y= 10-2) +
+    
+    annotate("text", label=min, color="blue",
+             x=0.2, y=-40+2) +
+  
+    scale_x_continuous(breaks = seq(0,20,1), limits = c(0,20)) +
+    scale_y_continuous(breaks = seq(-40, 10, 5), limits = c(-42,12)) +
+    
+    scale_color_manual(values = c("To keep"="#24cf15", "To drop"="#d431a8")) +
+    
+    labs(x="Time (s)", y="X7 (cmH20.S/L)") +
+    
+    theme(panel.background = element_blank(),
+        axis.line = element_line(colour = "black"),
+        legend.position = "none")
+
+}
+ 
+```
+
+
+
+## `M.AllPlots` 
+
+```{r}
+M.AllPlots <- function(M.VolFlow, M.Impedance){
+  
+ # Plots
+ P1 <- M.PlotVolChannel(M.VolFlow)
+ P2 <- M.PlotFlowChannel(M.VolFlow)
+ P3 <- M.PlotR7Channel(M.Impedance)
+ P4 <- M.PlotZ7Channel(M.Impedance)
+ P5 <- M.PlotX7Channel(M.Impedance)
+
+ # Patchwork
+ 
+ name <- paste0(M.Impedance$patient, "_", M.Impedance$MeasureWithinTest, "_",
+                as.Date(M.Impedance$timestamp), ".png")
+ 
+ 
+ PM <- P4 + P3+ P5 +P2+P1 + plot_layout(nrow = 5, byrow = FALSE) + 
+   plot_annotation(title=name, subtitle=M.Impedance$Timestamp)
+ 
+ ggsave(here("1_Artifact-Detection/output", name), PM, height = 10, width = 8)
+ 
+ PM
+}
+```
+
+
+
+# 8. TEST LEVEL QUALITY CONTROL 
+
+
+## `T.OutZ7.1`
+```{r}
+T.OutZ7 <- function(Ms.Impedance){
+  
+  `%notin%` <- Negate(`%in%`)
+  
+  # calculate outliers
+  Ms.Impedance1<-Ms.Impedance 
+
+  Limits <- Ms.Impedance1 %>% 
+  group_by(patient, patient_test) %>% 
+  summarise(mean = mean(Z7, na.rm=T),
+            sd = sd(Z7, na.rm=T)) %>% 
+  ungroup() %>% 
+  mutate(T.OutlierLimitZ7.H = mean + 3*sd,
+         T.OutlierLimitZ7.L = mean - 3*sd) %>% 
+  select(-mean, -sd)
+  
+  # Identify the breaths that need to be drop
+  BreathsToDrop <- Ms.Impedance %>% 
+    merge(Limits, by=c("patient", "patient_test"), all = T) %>% 
+    mutate(BreathsToDrop = case_when(
+      Z7>T.OutlierLimitZ7.H ~ 1,
+      Z7<T.OutlierLimitZ7.L ~ 1,
+      TRUE ~ 0)) %>% 
+    filter(BreathsToDrop==1) %>% 
+    mutate(ID = paste0(patient,"-", patient_test, "-", MeasureWithinTest, "-", Breath)) %>% 
+    select(ID) %>% t() %>% as.character()
+
+ # Flag breaths to remove in the impedance channels
+ Ms.Impedance<-Ms.Impedance %>% 
+    merge(Limits, by=c("patient", "patient_test"), all = T) %>%  
+    mutate(ID = paste0(patient,"-", patient_test, "-", MeasureWithinTest, "-", Breath),
+           T.Drop4.OutZ7 = case_when(
+             is.na(Breath) ~ NA_real_,
+             ID %in% c(BreathsToDrop) ~ 1,
+             ID %notin% c(BreathsToDrop) ~ 0))  
+
+ Ms.Impedance
+}
+     
+```
+
+
+## `T.OutZ7.2`
+```{r}
+T.OutZ7.2 <- function(Ms.Impedance){
+  
+  `%notin%` <- Negate(`%in%`)
+  
+  # calculate outliers
+  Ms.Impedance1<-Ms.Impedance %>% 
+    filter(T.Drop4.OutZ7==0 | is.na(T.Drop4.OutZ7))
+
+  Limits <- Ms.Impedance1 %>% 
+  group_by(patient, patient_test) %>% 
+  summarise(mean = mean(Z7, na.rm=T),
+            sd = sd(Z7, na.rm=T)) %>% 
+  ungroup() %>% 
+  mutate(T.OutlierLimitZ7.H2 = mean + 3*sd,
+         T.OutlierLimitZ7.L2 = mean - 3*sd) %>% 
+  select(-mean, -sd)
+  
+  # Identify the breaths that need to be drop
+  BreathsToDrop <- Ms.Impedance %>% 
+    merge(Limits, by=c("patient", "patient_test"), all = T) %>% 
+    mutate(BreathsToDrop = case_when(
+      Z7>T.OutlierLimitZ7.H2 ~ 1,
+      Z7<T.OutlierLimitZ7.L2 ~ 1,
+      TRUE ~ 0)) %>% 
+    filter(BreathsToDrop==1) %>% 
+    mutate(ID = paste0(patient,"-", patient_test, "-", MeasureWithinTest, "-", Breath)) %>% 
+    select(ID) %>% t() %>% as.character()
+
+ # Flag breaths to remove in the impedance channels
+ Ms.Impedance<-Ms.Impedance %>% 
+    merge(Limits, by=c("patient", "patient_test"), all = T) %>%  
+    mutate(ID = paste0(patient,"-", patient_test, "-", MeasureWithinTest, "-", Breath),
+           T.Drop4.OutZ7.2 = case_when(
+             is.na(Breath) ~ NA_real_,
+             ID %in% c(BreathsToDrop) ~ 1,
+             ID %notin% c(BreathsToDrop) ~ 0))  
+
+ Ms.Impedance
+}
+     
+```
+
+
+
+## `T.OutZ7.3`
+```{r}
+T.OutZ7.3 <- function(Ms.Impedance){
+  
+  `%notin%` <- Negate(`%in%`)
+  
+  # calculate outliers
+  Ms.Impedance1<-Ms.Impedance %>% 
+    filter(T.Drop4.OutZ7==0 | is.na(T.Drop4.OutZ7)) %>%
+    filter(T.Drop4.OutZ7.2==0 | is.na(T.Drop4.OutZ7.2))
+
+  Limits <- Ms.Impedance1 %>% 
+  group_by(patient, patient_test) %>% 
+  summarise(mean = mean(Z7, na.rm=T),
+            sd = sd(Z7, na.rm=T)) %>% 
+  ungroup() %>% 
+  mutate(T.OutlierLimitZ7.H3 = mean + 3*sd,
+         T.OutlierLimitZ7.L3 = mean - 3*sd) %>% 
+  select(-mean, -sd)
+  
+  # Identify the breaths that need to be drop
+  BreathsToDrop <- Ms.Impedance %>% 
+    merge(Limits, by=c("patient", "patient_test"), all = T) %>% 
+    mutate(BreathsToDrop = case_when(
+      Z7>T.OutlierLimitZ7.H3 ~ 1,
+      Z7<T.OutlierLimitZ7.L3 ~ 1,
+      TRUE ~ 0)) %>% 
+    filter(BreathsToDrop==1) %>% 
+    mutate(ID = paste0(patient,"-", patient_test, "-", MeasureWithinTest, "-", Breath)) %>% 
+    select(ID) %>% t() %>% as.character()
+
+ # Flag breaths to remove in the impedance channels
+ Ms.Impedance<-Ms.Impedance %>% 
+    merge(Limits, by=c("patient", "patient_test"), all = T) %>%  
+    mutate(ID = paste0(patient,"-", patient_test, "-", MeasureWithinTest, "-", Breath),
+           T.Drop4.OutZ7.3 = case_when(
+             is.na(Breath) ~ NA_real_,
+             ID %in% c(BreathsToDrop) ~ 1,
+             ID %notin% c(BreathsToDrop) ~ 0))  
+
+ Ms.Impedance
+}
+     
+```
+
+
+
+
+## `T.OutR7.1`
+```{r}
+T.OutR7 <- function(Ms.Impedance){
+  
+  `%notin%` <- Negate(`%in%`)
+  
+  # calculate outliers
+  Ms.Impedance1<-Ms.Impedance 
+
+  Limits <- Ms.Impedance1 %>% 
+  group_by(patient, patient_test) %>% 
+  summarise(mean = mean(R7, na.rm=T),
+            sd = sd(R7, na.rm=T)) %>% 
+  ungroup() %>% 
+  mutate(T.OutlierLimitR7.H = mean + 3*sd,
+         T.OutlierLimitR7.L = mean - 3*sd) %>% 
+  select(-mean, -sd)
+  
+  # Identify the breaths that need to be drop
+  BreathsToDrop <- Ms.Impedance %>% 
+    merge(Limits, by=c("patient", "patient_test"), all = T) %>% 
+    mutate(BreathsToDrop = case_when(
+      R7>T.OutlierLimitR7.H ~ 1,
+      R7<T.OutlierLimitR7.L ~ 1,
+      TRUE ~ 0)) %>% 
+    filter(BreathsToDrop==1) %>% 
+    mutate(ID = paste0(patient,"-", patient_test, "-", MeasureWithinTest, "-", Breath)) %>% 
+    select(ID) %>% t() %>% as.character()
+
+ # Flag breaths to remove in the impedance channels
+ Ms.Impedance<-Ms.Impedance %>% 
+    merge(Limits, by=c("patient", "patient_test"), all = T) %>%  
+    mutate(ID = paste0(patient,"-", patient_test, "-", MeasureWithinTest, "-", Breath),
+           T.Drop4.OutR7 = case_when(
+             is.na(Breath) ~ NA_real_,
+             ID %in% c(BreathsToDrop) ~ 1,
+             ID %notin% c(BreathsToDrop) ~ 0))  
+
+ Ms.Impedance
+}
+     
+```
+
+
+## `T.OutR7.2`
+```{r}
+T.OutR7.2 <- function(Ms.Impedance){
+  
+  `%notin%` <- Negate(`%in%`)
+  
+  # calculate outliers
+  Ms.Impedance1<-Ms.Impedance %>% 
+    filter(T.Drop4.OutR7==0 | is.na(T.Drop4.OutR7))
+
+  Limits <- Ms.Impedance1 %>% 
+  group_by(patient, patient_test) %>% 
+  summarise(mean = mean(R7, na.rm=T),
+            sd = sd(R7, na.rm=T)) %>% 
+  ungroup() %>% 
+  mutate(T.OutlierLimitR7.H2 = mean + 3*sd,
+         T.OutlierLimitR7.L2 = mean - 3*sd) %>% 
+  select(-mean, -sd)
+  
+  # Identify the breaths that need to be drop
+  BreathsToDrop <- Ms.Impedance %>% 
+    merge(Limits, by=c("patient", "patient_test"), all = T) %>% 
+    mutate(BreathsToDrop = case_when(
+      R7>T.OutlierLimitR7.H2 ~ 1,
+      R7<T.OutlierLimitR7.L2 ~ 1,
+      TRUE ~ 0)) %>% 
+    filter(BreathsToDrop==1) %>% 
+    mutate(ID = paste0(patient,"-", patient_test, "-", MeasureWithinTest, "-", Breath)) %>% 
+    select(ID) %>% t() %>% as.character()
+
+ # Flag breaths to remove in the impedance channels
+ Ms.Impedance<-Ms.Impedance %>% 
+    merge(Limits, by=c("patient", "patient_test"), all = T) %>%  
+    mutate(ID = paste0(patient,"-", patient_test, "-", MeasureWithinTest, "-", Breath),
+           T.Drop4.OutR7.2 = case_when(
+             is.na(Breath) ~ NA_real_,
+             ID %in% c(BreathsToDrop) ~ 1,
+             ID %notin% c(BreathsToDrop) ~ 0))  
+
+ Ms.Impedance
+}
+     
+```
+
+
+
+## `T.OutR7.3`
+```{r}
+T.OutR7.3 <- function(Ms.Impedance){
+  
+  `%notin%` <- Negate(`%in%`)
+  
+  # calculate outliers
+  Ms.Impedance1<-Ms.Impedance %>% 
+    filter(T.Drop4.OutR7==0 | is.na(T.Drop4.OutR7)) %>%
+    filter(T.Drop4.OutR7.2==0 | is.na(T.Drop4.OutR7.2))
+
+  Limits <- Ms.Impedance1 %>% 
+  group_by(patient, patient_test) %>% 
+  summarise(mean = mean(R7, na.rm=T),
+            sd = sd(R7, na.rm=T)) %>% 
+  ungroup() %>% 
+  mutate(T.OutlierLimitR7.H3 = mean + 3*sd,
+         T.OutlierLimitR7.L3 = mean - 3*sd) %>% 
+  select(-mean, -sd)
+  
+  # Identify the breaths that need to be drop
+  BreathsToDrop <- Ms.Impedance %>% 
+    merge(Limits, by=c("patient", "patient_test"), all = T) %>% 
+    mutate(BreathsToDrop = case_when(
+      R7>T.OutlierLimitR7.H3 ~ 1,
+      R7<T.OutlierLimitR7.L3 ~ 1,
+      TRUE ~ 0)) %>% 
+    filter(BreathsToDrop==1) %>% 
+    mutate(ID = paste0(patient,"-", patient_test, "-", MeasureWithinTest, "-", Breath)) %>% 
+    select(ID) %>% t() %>% as.character()
+
+ # Flag breaths to remove in the impedance channels
+ Ms.Impedance<-Ms.Impedance %>% 
+    merge(Limits, by=c("patient", "patient_test"), all = T) %>%  
+    mutate(ID = paste0(patient,"-", patient_test, "-", MeasureWithinTest, "-", Breath),
+           T.Drop4.OutR7.3 = case_when(
+             is.na(Breath) ~ NA_real_,
+             ID %in% c(BreathsToDrop) ~ 1,
+             ID %notin% c(BreathsToDrop) ~ 0))  
+
+ Ms.Impedance
+}
+     
+```
+
+
+## `T.OutX7.1`
+```{r}
+T.OutX7 <- function(Ms.Impedance){
+  
+  `%notin%` <- Negate(`%in%`)
+  
+  # calculate outliers
+  Ms.Impedance1<-Ms.Impedance 
+
+  Limits <- Ms.Impedance1 %>% 
+  group_by(patient, patient_test) %>% 
+  summarise(mean = mean(X7, na.rm=T),
+            sd = sd(X7, na.rm=T)) %>% 
+  ungroup() %>% 
+  mutate(T.OutlierLimitX7.H = mean + 3*sd,
+         T.OutlierLimitX7.L = mean - 3*sd) %>% 
+  select(-mean, -sd)
+  
+  # Identify the breaths that need to be drop
+  BreathsToDrop <- Ms.Impedance %>% 
+    merge(Limits, by=c("patient", "patient_test"), all = T) %>% 
+    mutate(BreathsToDrop = case_when(
+      X7>T.OutlierLimitX7.H ~ 1,
+      X7<T.OutlierLimitX7.L ~ 1,
+      TRUE ~ 0)) %>% 
+    filter(BreathsToDrop==1) %>% 
+    mutate(ID = paste0(patient,"-", patient_test, "-", MeasureWithinTest, "-", Breath)) %>% 
+    select(ID) %>% t() %>% as.character()
+
+ # Flag breaths to remove in the impedance channels
+ Ms.Impedance<-Ms.Impedance %>% 
+    merge(Limits, by=c("patient", "patient_test"), all = T) %>%  
+    mutate(ID = paste0(patient,"-", patient_test, "-", MeasureWithinTest, "-", Breath),
+           T.Drop4.OutX7 = case_when(
+             is.na(Breath) ~ NA_real_,
+             ID %in% c(BreathsToDrop) ~ 1,
+             ID %notin% c(BreathsToDrop) ~ 0))  
+
+ Ms.Impedance
+}
+     
+```
+
+
+## `T.OutX7.2`
+```{r}
+T.OutX7.2 <- function(Ms.Impedance){
+  
+  `%notin%` <- Negate(`%in%`)
+  
+  # calculate outliers
+  Ms.Impedance1<-Ms.Impedance %>% 
+    filter(T.Drop4.OutX7==0 | is.na(T.Drop4.OutX7))
+
+  Limits <- Ms.Impedance1 %>% 
+  group_by(patient, patient_test) %>% 
+  summarise(mean = mean(X7, na.rm=T),
+            sd = sd(X7, na.rm=T)) %>% 
+  ungroup() %>% 
+  mutate(T.OutlierLimitX7.H2 = mean + 3*sd,
+         T.OutlierLimitX7.L2 = mean - 3*sd) %>% 
+  select(-mean, -sd)
+  
+  # Identify the breaths that need to be drop
+  BreathsToDrop <- Ms.Impedance %>% 
+    merge(Limits, by=c("patient", "patient_test"), all = T) %>% 
+    mutate(BreathsToDrop = case_when(
+      X7>T.OutlierLimitX7.H2 ~ 1,
+      X7<T.OutlierLimitX7.L2 ~ 1,
+      TRUE ~ 0)) %>% 
+    filter(BreathsToDrop==1) %>% 
+    mutate(ID = paste0(patient,"-", patient_test, "-", MeasureWithinTest, "-", Breath)) %>% 
+    select(ID) %>% t() %>% as.character()
+
+ # Flag breaths to remove in the impedance channels
+ Ms.Impedance<-Ms.Impedance %>% 
+    merge(Limits, by=c("patient", "patient_test"), all = T) %>%  
+    mutate(ID = paste0(patient,"-", patient_test, "-", MeasureWithinTest, "-", Breath),
+           T.Drop4.OutX7.2 = case_when(
+             is.na(Breath) ~ NA_real_,
+             ID %in% c(BreathsToDrop) ~ 1,
+             ID %notin% c(BreathsToDrop) ~ 0))  
+
+ Ms.Impedance
+}
+     
+```
+
+
+
+## `T.OutX7.3`
+```{r}
+T.OutX7.3 <- function(Ms.Impedance){
+  
+  `%notin%` <- Negate(`%in%`)
+  
+  # calculate outliers
+  Ms.Impedance1<-Ms.Impedance %>% 
+    filter(T.Drop4.OutX7==0 | is.na(T.Drop4.OutX7)) %>%
+    filter(T.Drop4.OutX7.2==0 | is.na(T.Drop4.OutX7.2))
+
+  Limits <- Ms.Impedance1 %>% 
+  group_by(patient, patient_test) %>% 
+  summarise(mean = mean(X7, na.rm=T),
+            sd = sd(X7, na.rm=T)) %>% 
+  ungroup() %>% 
+  mutate(T.OutlierLimitX7.H3 = mean + 3*sd,
+         T.OutlierLimitX7.L3 = mean - 3*sd) %>% 
+  select(-mean, -sd)
+  
+  # Identify the breaths that need to be drop
+  BreathsToDrop <- Ms.Impedance %>% 
+    merge(Limits, by=c("patient", "patient_test"), all = T) %>% 
+    mutate(BreathsToDrop = case_when(
+      X7>T.OutlierLimitX7.H3 ~ 1,
+      X7<T.OutlierLimitX7.L3 ~ 1,
+      TRUE ~ 0)) %>% 
+    filter(BreathsToDrop==1) %>% 
+    mutate(ID = paste0(patient,"-", patient_test, "-", MeasureWithinTest, "-", Breath)) %>% 
+    select(ID) %>% t() %>% as.character()
+
+ # Flag breaths to remove in the impedance channels
+ Ms.Impedance<-Ms.Impedance %>% 
+    merge(Limits, by=c("patient", "patient_test"), all = T) %>%  
+    mutate(ID = paste0(patient,"-", patient_test, "-", MeasureWithinTest, "-", Breath),
+           T.Drop4.OutX7.3 = case_when(
+             is.na(Breath) ~ NA_real_,
+             ID %in% c(BreathsToDrop) ~ 1,
+             ID %notin% c(BreathsToDrop) ~ 0))  
+
+ Ms.Impedance
+}
+     
+```
+
+
+## T.DropBreath
+```{r}
+
+T.DropBreaths <- function(Ms.Impedance){
+
+Ms.Impedance <- Ms.Impedance %>% 
+    mutate(
+      DropBreath.TSDExt = factor(case_when(
+         Drop1.BreathTrim == 1 |
+         Drop2.FlatVol == 1 |  
+         Drop3.NegR7==1 | Drop3.NoR7==1 | Drop3.NoX7==1 |
+         T.Drop4.OutR7==1 | T.Drop4.OutR7.2==1 | T.Drop4.OutR7.3==1 |
+         T.Drop4.OutX7==1 | T.Drop4.OutX7.2==1 | T.Drop4.OutX7.3==1 |  
+         T.Drop4.OutZ7==1 | T.Drop4.OutZ7.2==1 | T.Drop4.OutZ7.3==1  ~ 1,
+     
+         Drop1.BreathTrim == 0 &
+         Drop2.FlatVol == 0 &  
+         Drop3.NegR7==0 & Drop3.NoR7==0 & Drop3.NoX7==0 &
+         T.Drop4.OutR7 == 0 & T.Drop4.OutR7.2 == 0 & T.Drop4.OutR7.3 == 0 &
+         T.Drop4.OutX7 == 0 & T.Drop4.OutX7.2 == 0 & T.Drop4.OutX7.3 == 0 &
+         T.Drop4.OutZ7 == 0 & T.Drop4.OutZ7.2 == 0 & T.Drop4.OutZ7.3 == 0  ~ 0,
+     
+        TRUE ~ NA_real_)))
+
+ Ms.Impedance
+}
+```
+
+
+## T.KeepMeasure
+
+
+```{r}
+
+T.KeepMeasure <- function(Ms.Impedance){
+
+validMeasures<-Ms.Impedance %>% 
+  filter(DropBreath.TSDExt==0) %>% 
+  distinct(patient, patient_test, MeasureWithinTest, BreathAfterTrim) %>% 
+  count(patient, patient_test, MeasureWithinTest) %>% 
+  rename("ValidBreaths"=n) %>% 
+  filter(ValidBreaths>=4) %>% 
+  mutate(ID = paste0(patient,"-", patient_test, "-", MeasureWithinTest)) %>% 
+  select(ID) %>% t() %>% as.character()
+
+Ms.Impedance <- Ms.Impedance %>% 
+  mutate(ID = paste0(patient,"-", patient_test, "-", MeasureWithinTest)) %>% 
+  mutate(KeepMeasure.TSDExt = ifelse(ID %in% c(validMeasures),1,0))
+
+ Ms.Impedance
+}
+```
+
+
+## T.AllSteps
+
+```{r}
+T.AllSteps <- function(Ms.Impedance){
+  
+  # Apply function: Obstructions
+  Ms.Impedance<-T.OutR7(Ms.Impedance)
+  Ms.Impedance<-T.OutR7.2(Ms.Impedance)
+  Ms.Impedance<-T.OutR7.3(Ms.Impedance)
+  Ms.Impedance<-T.OutX7(Ms.Impedance)
+  Ms.Impedance<-T.OutX7.2(Ms.Impedance)
+  Ms.Impedance<-T.OutX7.3(Ms.Impedance)
+  Ms.Impedance<-T.OutZ7(Ms.Impedance)
+  Ms.Impedance<-T.OutZ7.2(Ms.Impedance)
+  Ms.Impedance<-T.OutZ7.3(Ms.Impedance)
+
+  # Drop breaths
+  Ms.Impedance<-T.DropBreaths(Ms.Impedance)
+  
+  # Keep measures
+  Ms.Impedance<-T.KeepMeasure(Ms.Impedance)
+
+  Ms.Impedance
+}
+
+```
+
+
+
+
+
+# THE END
+
